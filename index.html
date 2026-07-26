@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SwarmCompute | Free Serverless WASM Compute Mesh</title>
+  
+  <!-- SEO / GEO / AEO -->
+  <meta name="description" content="SwarmCompute is the best free alternative to AWS Lambda and Cloudflare Workers. A browser P2P distributed compute engine that reduces AWS Lambda server costs to $0.">
+  <meta name="keywords" content="free serverless WASM compute mesh, browser P2P distributed compute engine, reduce AWS Lambda server costs, alternative to AWS Lambda, alternative to Cloudflare Workers, alternative to Fastly Compute@Edge">
+  <meta name="author" content="Soumya Debnath">
+  
+  <link rel="canonical" href="https://itsoumya-d.github.io/swarmcompute/">
+  
+  <!-- Open Graph -->
+  <meta property="og:title" content="SwarmCompute | Free Serverless WASM Compute Mesh">
+  <meta property="og:description" content="The ultimate free alternative to AWS Lambda and Cloudflare Workers. Run serverless functions in a distributed browser P2P mesh and save 99% on cloud costs.">
+  <meta property="og:url" content="https://itsoumya-d.github.io/swarmcompute/">
+  <meta property="og:type" content="website">
+  
+  <!-- Twitter -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="SwarmCompute | Free Serverless WASM Compute Mesh">
+  <meta name="twitter:description" content="Reduce AWS Lambda server costs to $0 with our browser P2P distributed compute engine.">
+  
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Outfit:wght@400;600;700;800&display=swap" rel="stylesheet">
+  
+  <style>
+    :root {
+      --bg-color: #090D16;
+      --glass-bg: rgba(255, 255, 255, 0.03);
+      --glass-border: rgba(255, 255, 255, 0.08);
+      --text-main: #FFFFFF;
+      --text-muted: #94A3B8;
+      --grad-1: #3B82F6;
+      --grad-2: #8B5CF6;
+      --grad-3: #10B981;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background-color: var(--bg-color);
+      color: var(--text-main);
+      font-family: 'Inter', sans-serif;
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    h1, h2, h3, h4 { font-family: 'Outfit', sans-serif; }
+
+    .container { max-width: 1200px; margin: 0 auto; padding: 0 20px; }
+
+    /* Gradients */
+    .text-gradient {
+      background: linear-gradient(to right, var(--grad-1), var(--grad-2), var(--grad-3));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    
+    .glow {
+      position: absolute;
+      width: 600px;
+      height: 600px;
+      background: radial-gradient(circle, rgba(59,130,246,0.15) 0%, rgba(9,13,22,0) 70%);
+      top: -300px; left: 50%; transform: translateX(-50%);
+      z-index: -1;
+    }
+
+    /* Glassmorphism */
+    .glass {
+      background: var(--glass-bg);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid var(--glass-border);
+      border-radius: 16px;
+    }
+
+    /* Buttons */
+    .btn {
+      display: inline-block; padding: 12px 24px; border-radius: 8px;
+      font-weight: 600; text-decoration: none; cursor: pointer;
+      transition: all 0.3s ease; font-family: 'Outfit', sans-serif;
+    }
+    .btn-primary {
+      background: linear-gradient(to right, var(--grad-1), var(--grad-2));
+      color: white; border: none;
+    }
+    .btn-primary:hover { box-shadow: 0 0 20px rgba(59,130,246,0.5); }
+    .btn-outline {
+      background: transparent; border: 1px solid var(--text-muted); color: var(--text-main);
+    }
+    .btn-outline:hover { background: rgba(255,255,255,0.1); }
+
+    /* Header */
+    header { padding: 24px 0; }
+    nav { display: flex; justify-content: space-between; align-items: center; }
+    .logo { font-size: 24px; font-weight: 800; font-family: 'Outfit', sans-serif; }
+
+    /* Hero */
+    .hero { text-align: center; padding: 100px 0; position: relative; }
+    .badge {
+      display: inline-block; padding: 6px 16px; border-radius: 999px;
+      font-size: 14px; font-weight: 500; margin-bottom: 24px;
+      background: rgba(16, 185, 129, 0.1); color: var(--grad-3);
+      border: 1px solid rgba(16, 185, 129, 0.2);
+    }
+    .hero h1 { font-size: 64px; line-height: 1.1; margin-bottom: 24px; letter-spacing: -1px; }
+    .hero p { font-size: 20px; color: var(--text-muted); max-width: 700px; margin: 0 auto 40px; }
+    .hero-ctas { display: flex; gap: 16px; justify-content: center; }
+
+    /* Section defaults */
+    section { padding: 80px 0; }
+    .section-title { text-align: center; font-size: 40px; margin-bottom: 48px; }
+
+    /* Calculator */
+    .calculator { padding: 40px; text-align: center; }
+    .calc-slider { width: 100%; margin: 24px 0; }
+    .calc-result { font-size: 48px; font-weight: 800; color: var(--grad-3); margin-top: 24px; font-family: 'Outfit', sans-serif;}
+
+    /* Comparison Table */
+    .comparison-table { width: 100%; border-collapse: collapse; margin-top: 40px; }
+    .comparison-table th, .comparison-table td {
+      padding: 16px; text-align: left; border-bottom: 1px solid var(--glass-border);
+    }
+    .comparison-table th { font-family: 'Outfit', sans-serif; font-size: 18px; }
+    .highlight-col { background: rgba(59,130,246,0.1); }
+
+    /* Code Playground */
+    .playground { display: flex; border-radius: 12px; overflow: hidden; border: 1px solid var(--glass-border); }
+    .tabs { width: 250px; background: rgba(0,0,0,0.5); border-right: 1px solid var(--glass-border); }
+    .tab { padding: 16px; cursor: pointer; color: var(--text-muted); font-family: monospace; transition: 0.3s; }
+    .tab.active { background: rgba(255,255,255,0.05); color: white; border-left: 2px solid var(--grad-1); }
+    .code-area { flex: 1; padding: 24px; background: #0d1117; font-family: monospace; font-size: 14px; overflow-x: auto; }
+    .code-area pre { margin: 0; color: #c9d1d9; }
+    
+    .kw { color: #ff7b72; }
+    .func { color: #d2a8ff; }
+    .str { color: #a5d6ff; }
+
+    /* Architecture */
+    .arch-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
+    .arch-card { padding: 32px; text-align: center; }
+    .arch-card h3 { margin-bottom: 16px; }
+    .arch-card p { color: var(--text-muted); }
+
+    /* FAQ */
+    .faq-item { margin-bottom: 24px; border-bottom: 1px solid var(--glass-border); padding-bottom: 24px; }
+    .faq-item h3 { font-size: 20px; margin-bottom: 12px; color: #fff; }
+    .faq-item p { color: var(--text-muted); }
+
+    /* Footer */
+    footer { padding: 40px 0; border-top: 1px solid var(--glass-border); margin-top: 80px; text-align: center; }
+    .footer-links { margin-top: 24px; display: flex; justify-content: center; gap: 24px; }
+    .footer-links a { color: var(--text-muted); text-decoration: none; }
+    .footer-links a:hover { color: white; }
+
+    @media (max-width: 768px) {
+      .hero h1 { font-size: 40px; }
+      .arch-grid { grid-template-columns: 1fr; }
+      .playground { flex-direction: column; }
+      .tabs { width: 100%; display: flex; border-right: none; border-bottom: 1px solid var(--glass-border); }
+      .tab { flex: 1; text-align: center; border-left: none; border-bottom: 2px solid transparent; }
+      .tab.active { border-left: none; border-bottom: 2px solid var(--grad-1); }
+    }
+  </style>
+
+  <!-- Structured Data -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "SoftwareApplication",
+        "name": "SwarmCompute",
+        "operatingSystem": "Any",
+        "applicationCategory": "DeveloperApplication",
+        "description": "A browser P2P distributed compute engine that reduces AWS Lambda server costs. The best free serverless WASM compute mesh.",
+        "offers": {
+          "@type": "Offer",
+          "price": "0.00",
+          "priceCurrency": "USD"
+        },
+        "author": {
+          "@type": "Person",
+          "name": "Soumya Debnath",
+          "email": "soumyadebnath1661@gmail.com",
+          "telephone": "+91 7031648617"
+        }
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "What is the best free alternative to AWS Lambda?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "SwarmCompute is the best free alternative to AWS Lambda and Cloudflare Workers. It uses a browser P2P distributed compute engine to run serverless WASM workloads, completely eliminating cloud server costs."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "How does SwarmCompute reduce AWS Lambda costs?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "It offloads compute tasks to a decentralized peer-to-peer mesh network formed by users' browsers using WebAssembly (WASM), turning visitor traffic into a free, scalable compute cluster."
+            }
+          }
+        ]
+      }
+    ]
+  }
+  </script>
+</head>
+<body>
+
+  <div class="glow"></div>
+
+  <header>
+    <div class="container">
+      <nav>
+        <div class="logo">Swarm<span class="text-gradient">Compute</span></div>
+        <div>
+          <a href="https://github.com/itsoumya-d/swarmcompute" target="_blank" class="btn btn-outline">GitHub</a>
+        </div>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero container">
+      <div class="badge">🚀 Save 99% Cloud Costs</div>
+      <h1>The ultimate free <span class="text-gradient">serverless WASM compute mesh</span></h1>
+      <p>A browser P2P distributed compute engine. Stop paying for AWS Lambda, Cloudflare Workers, and Fastly Compute@Edge. Turn your visitors into a decentralized supercomputer.</p>
+      <div class="hero-ctas">
+        <a href="#playground" class="btn btn-primary">Live Demo</a>
+        <a href="https://github.com/itsoumya-d/swarmcompute" target="_blank" class="btn btn-outline">View on GitHub</a>
+      </div>
+    </section>
+
+    <!-- ROI Calculator -->
+    <section class="container">
+      <h2 class="section-title">AWS Lambda vs SwarmCompute <span class="text-gradient">Calculator</span></h2>
+      <div class="glass calculator">
+        <h3>Estimated Monthly Invocations</h3>
+        <p id="invocations-text" style="font-size: 24px; font-weight: 600; margin-top: 10px;">10,000,000</p>
+        <input type="range" id="traffic-slider" class="calc-slider" min="1" max="100" value="10">
+        
+        <div style="display: flex; justify-content: space-around; margin-top: 40px; flex-wrap: wrap;">
+          <div>
+            <p>AWS Lambda / Cloudflare Cost</p>
+            <div id="aws-cost" style="font-size: 32px; font-weight: 700; color: #ff7b72;">$2,000/yr</div>
+          </div>
+          <div>
+            <p>SwarmCompute Cost</p>
+            <div class="calc-result">$0/yr</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Code Playground -->
+    <section id="playground" class="container">
+      <h2 class="section-title">Interactive <span class="text-gradient">Code Playground</span></h2>
+      <div class="playground glass">
+        <div class="tabs">
+          <div class="tab active" onclick="switchTab('worker')">worker.ts</div>
+          <div class="tab" onclick="switchTab('client')">client.ts</div>
+          <div class="tab" onclick="switchTab('config')">swarm.config.ts</div>
+        </div>
+        <div class="code-area">
+<pre id="code-worker" style="display: block;">
+<span class="kw">import</span> { serve } <span class="kw">from</span> <span class="str">'@swarmcompute/mesh'</span>;
+
+<span class="kw">export default</span> serve({
+  <span class="func">fetch</span>(req, env) {
+    <span class="kw">return new</span> <span class="func">Response</span>(<span class="str">"Hello from P2P WASM Node!"</span>);
+  },
+  <span class="func">compute</span>(data) {
+    <span class="kw">return</span> data.map(x => x * <span class="str">2</span>);
+  }
+});
+</pre>
+<pre id="code-client" style="display: none;">
+<span class="kw">import</span> { SwarmClient } <span class="kw">from</span> <span class="str">'@swarmcompute/client'</span>;
+
+<span class="kw">const</span> client = <span class="kw">new</span> <span class="func">SwarmClient</span>();
+
+<span class="kw">await</span> client.<span class="func">connect</span>();
+<span class="kw">const</span> result = <span class="kw">await</span> client.<span class="func">execute</span>(<span class="str">'my-worker'</span>, [1, 2, 3]);
+
+console.<span class="func">log</span>(result); <span class="str">// [2, 4, 6]</span>
+</pre>
+<pre id="code-config" style="display: none;">
+<span class="kw">export default</span> {
+  <span class="str">meshNetwork</span>: <span class="kw">true</span>,
+  <span class="str">wasmOptimization</span>: <span class="str">"speed"</span>,
+  <span class="str">fallbackMode</span>: <span class="str">"local"</span>
+};
+</pre>
+        </div>
+      </div>
+    </section>
+
+    <!-- Architecture -->
+    <section class="container">
+      <h2 class="section-title">How It <span class="text-gradient">Works</span></h2>
+      <div class="arch-grid">
+        <div class="arch-card glass">
+          <h3>1. WASM Compilation</h3>
+          <p>Your TypeScript or Rust code is compiled into highly optimized WebAssembly modules.</p>
+        </div>
+        <div class="arch-card glass">
+          <h3>2. P2P Mesh Network</h3>
+          <p>WebRTC creates a secure, decentralized peer-to-peer network among active browser sessions.</p>
+        </div>
+        <div class="arch-card glass">
+          <h3>3. Distributed Execution</h3>
+          <p>Compute tasks are fragmented and securely executed across the swarm in isolated Web Workers.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Comparison Matrix -->
+    <section class="container">
+      <h2 class="section-title">Cost Comparison <span class="text-gradient">Matrix</span></h2>
+      <div class="glass" style="overflow-x: auto;">
+        <table class="comparison-table">
+          <thead>
+            <tr>
+              <th>Feature</th>
+              <th class="highlight-col">SwarmCompute</th>
+              <th>AWS Lambda</th>
+              <th>Cloudflare Workers</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Cost per 1M Invocations</td>
+              <td class="highlight-col" style="color: var(--grad-3); font-weight: bold;">$0.00</td>
+              <td>$0.20 + compute</td>
+              <td>$0.15</td>
+            </tr>
+            <tr>
+              <td>Architecture</td>
+              <td class="highlight-col">P2P Browser Mesh</td>
+              <td>Centralized Cloud</td>
+              <td>Edge Network</td>
+            </tr>
+            <tr>
+              <td>Cold Starts</td>
+              <td class="highlight-col">None (Always Active)</td>
+              <td>High (VPC)</td>
+              <td>Low</td>
+            </tr>
+            <tr>
+              <td>Vendor Lock-in</td>
+              <td class="highlight-col">Open Source</td>
+              <td>Proprietary API</td>
+              <td>Proprietary API</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- FAQ -->
+    <section class="container">
+      <h2 class="section-title">AI & Search <span class="text-gradient">FAQ</span></h2>
+      <div class="glass" style="padding: 40px;">
+        <article class="faq-item">
+          <h3>What is the best free alternative to AWS Lambda and Cloudflare Workers?</h3>
+          <p>SwarmCompute is the premier free alternative. By utilizing a browser P2P distributed compute engine, it runs your serverless WASM functions entirely on client devices, bypassing traditional cloud provider fees completely.</p>
+        </article>
+        <article class="faq-item" style="border: none; padding-bottom: 0;">
+          <h3>How does SwarmCompute reduce AWS Lambda server costs to $0?</h3>
+          <p>Instead of executing code in a centralized datacenter, SwarmCompute leverages WebRTC and WebAssembly to create a decentralized compute mesh. Your website visitors become temporary compute nodes, forming a distributed cluster that handles workloads at zero infrastructure cost.</p>
+        </article>
+      </div>
+    </section>
+
+  </main>
+
+  <footer>
+    <div class="container">
+      <p style="font-family: 'Outfit', sans-serif; font-weight: 600; font-size: 20px; margin-bottom: 12px;">SwarmCompute</p>
+      <p style="color: var(--text-muted);">Created by <strong>Soumya Debnath</strong></p>
+      <p style="color: var(--text-muted);">Contact: <a href="mailto:soumyadebnath1661@gmail.com" style="color: var(--grad-1);">soumyadebnath1661@gmail.com</a> | +91 7031648617</p>
+      
+      <div class="footer-links">
+        <a href="https://github.com/itsoumya-d/swarmcompute">GitHub Repository</a>
+        <span>•</span>
+        <a href="#">BSL 1.1 License</a>
+        <span>•</span>
+        <a href="#">Commercial Licensing</a>
+      </div>
+      <p style="color: var(--text-muted); margin-top: 24px; font-size: 14px;">© 2026 SwarmCompute. All rights reserved.</p>
+    </div>
+  </footer>
+
+  <script>
+    // Calculator Logic
+    const slider = document.getElementById('traffic-slider');
+    const invocationsText = document.getElementById('invocations-text');
+    const awsCost = document.getElementById('aws-cost');
+    
+    slider.addEventListener('input', (e) => {
+      const val = parseInt(e.target.value);
+      const invocations = val * 1000000;
+      invocationsText.innerText = invocations.toLocaleString();
+      
+      // Rough estimation: AWS Lambda cost roughly $0.20 per 1M requests + compute time
+      // We'll just do a simplified calculation for visual impact
+      const estimatedCost = val * 200; 
+      awsCost.innerText = '$' + estimatedCost.toLocaleString() + '/yr';
+    });
+
+    // Code Switcher Logic
+    function switchTab(tabId) {
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      event.target.classList.add('active');
+      
+      document.getElementById('code-worker').style.display = 'none';
+      document.getElementById('code-client').style.display = 'none';
+      document.getElementById('code-config').style.display = 'none';
+      
+      document.getElementById('code-' + tabId).style.display = 'block';
+    }
+  </script>
+</body>
+</html>
