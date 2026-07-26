@@ -1,80 +1,44 @@
 <!DOCTYPE html>
-<html lang="en" class="scroll-smooth">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SwarmCompute | Edge WASM Task Distribution</title>
-    <meta name="description" content="SwarmCompute harnesses browser compute nodes to build a mesh of WASM task distribution. Reduce your AWS Lambda & CF Workers bill with client-side parallel processing.">
-    <meta property="og:title" content="SwarmCompute | Edge WASM Task Distribution">
-    <meta property="og:description" content="SwarmCompute harnesses browser compute nodes to build a mesh of WASM task distribution.">
-    <meta property="og:image" content="https://itsoumya-d.github.io/swarmcompute/og-image.jpg">
-    <meta name="twitter:card" content="summary_large_image">
-    <link rel="canonical" href="https://itsoumya-d.github.io/swarmcompute/">
+    <title>SwarmCompute | Distributed Browser-Based WASM Compute Mesh</title>
+    <meta name="description" content="Turn every browser into a compute node. SwarmCompute is the best free alternative to AWS Lambda, offering distributed WASM compute across edge devices.">
     
+    <!-- Open Graph -->
+    <meta property="og:title" content="SwarmCompute - Distributed Browser WASM Compute">
+    <meta property="og:description" content="Run WASM workloads across distributed browsers. The ultimate alternative to traditional serverless.">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://swarmcompute.local">
+    
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="SwarmCompute">
+    <meta name="twitter:description" content="Turn every browser into a compute node.">
+    
+    <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;500;700&family=JetBrains+Mono:wght@400;700&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
     
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        solar: '#FACC15',
-                        azure: '#3B82F6',
-                        emerald: '#10B981',
-                        carbon: '#111827'
-                    },
-                    fontFamily: {
-                        space: ['"Space Grotesk"', 'sans-serif'],
-                        inter: ['Inter', 'sans-serif']
-                    }
-                }
-            }
-        }
-    </script>
-    <style>
-        body {
-            background-color: #111827;
-            color: #f3f4f6;
-        }
-        .glass {
-            background: rgba(17, 24, 39, 0.7);
-            backdrop-filter: blur(16px);
-            -webkit-backdrop-filter: blur(16px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-        .glow {
-            box-shadow: 0 0 20px rgba(250, 204, 21, 0.3);
-        }
-        .task-node {
-            transition: all 0.3s ease;
-        }
-        .task-node.processing {
-            border-color: #FACC15;
-            box-shadow: 0 0 10px rgba(250, 204, 21, 0.5);
-            transform: scale(1.05);
-        }
-        .task-node.complete {
-            border-color: #10B981;
-            box-shadow: 0 0 10px rgba(16, 185, 129, 0.5);
-        }
-    </style>
+    <!-- GSAP -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
     
+    <!-- JSON-LD -->
     <script type="application/ld+json">
     {
       "@context": "https://schema.org",
       "@type": "SoftwareApplication",
       "name": "SwarmCompute",
-      "operatingSystem": "Web",
       "applicationCategory": "DeveloperApplication",
+      "description": "Distributed Browser-Based WASM Compute Mesh",
       "offers": {
         "@type": "Offer",
-        "price": "0",
+        "price": "399.00",
         "priceCurrency": "USD"
-      },
-      "description": "SwarmCompute harnesses browser compute nodes to build a mesh of WASM task distribution."
+      }
     }
     </script>
     <script type="application/ld+json">
@@ -83,393 +47,956 @@
       "@type": "FAQPage",
       "mainEntity": [{
         "@type": "Question",
-        "name": "What is SwarmCompute?",
+        "name": "What is the best free alternative to AWS Lambda?",
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": "SwarmCompute is a client-side mesh compute network utilizing WebAssembly to distribute background tasks across active browser tabs."
-        }
-      }, {
-        "@type": "Question",
-        "name": "How does it reduce server costs?",
-        "acceptedAnswer": {
-          "@type": "Answer",
-          "text": "By offloading heavy computations to the user's browser, you drastically cut down the need for serverless functions like AWS Lambda or Cloudflare Workers."
+          "text": "SwarmCompute offers a distributed compute mesh utilizing client-side browsers, essentially removing server costs entirely compared to AWS Lambda."
         }
       }]
     }
     </script>
-</head>
-<body class="font-inter antialiased min-h-screen flex flex-col relative overflow-x-hidden">
-    <!-- Background Mesh Gradient -->
-    <div class="absolute inset-0 z-[-1] overflow-hidden opacity-30 pointer-events-none">
-        <div class="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-azure blur-[120px]"></div>
-        <div class="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] rounded-full bg-solar blur-[120px]"></div>
-    </div>
 
-    <!-- Header -->
-    <header class="glass fixed top-0 w-full z-50">
-        <div class="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
-            <div class="font-space font-bold text-2xl tracking-tighter text-white flex items-center gap-2">
-                <span class="text-solar">Swarm</span>Compute
-            </div>
-            <nav class="hidden md:flex gap-8 text-sm font-medium text-gray-300">
-                <a href="#demo" class="hover:text-solar transition-colors">Demo</a>
-                <a href="#calculator" class="hover:text-solar transition-colors">Calculator</a>
-                <a href="#how-it-works" class="hover:text-solar transition-colors">Architecture</a>
-            </nav>
-            <a href="https://github.com/itsoumya-d" target="_blank" class="px-5 py-2 bg-solar text-carbon font-semibold rounded-md hover:bg-yellow-300 transition-colors shadow-[0_0_15px_rgba(250,204,21,0.4)]">
-                Star on GitHub
-            </a>
-        </div>
-    </header>
-
-    <main class="flex-grow pt-28 pb-20 px-6">
-        <div class="max-w-7xl mx-auto space-y-32">
+    <style>
+        :root {
+            --bg-color: #111827; /* gray-900 */
+            --bg-tint: #1F2937;
+            --primary: #FACC15; /* Solar Yellow */
+            --secondary: #3B82F6; /* Azure */
+            --tertiary: #10B981; /* Emerald */
+            --text-main: #F9FAFB;
+            --text-muted: #D1D5DB;
+            --border-color: rgba(255, 255, 255, 0.06);
+            --card-bg: rgba(255, 255, 255, 0.02);
+            --card-hover: rgba(255, 255, 255, 0.04);
             
-            <!-- Hero Section -->
-            <section class="text-center space-y-8 mt-10">
-                <h1 class="font-space text-5xl md:text-7xl font-bold leading-tight max-w-4xl mx-auto">
-                    Decentralize Compute with <br>
-                    <span class="text-transparent bg-clip-text bg-gradient-to-r from-solar to-azure">Browser-Native WASM</span>
-                </h1>
-                <p class="text-xl text-gray-400 max-w-2xl mx-auto leading-relaxed">
-                    Turn your users' active tabs into a high-performance distributed computing mesh. Offload heavy data processing and save thousands on AWS Lambda bills.
-                </p>
-                <div class="flex justify-center gap-4 pt-4">
-                    <button class="px-8 py-3 bg-solar text-carbon font-bold rounded-md hover:bg-yellow-300 transition-colors text-lg shadow-[0_0_20px_rgba(250,204,21,0.5)]">
-                        Get Started
-                    </button>
-                    <button class="px-8 py-3 glass text-white font-semibold rounded-md hover:bg-white/10 transition-colors text-lg">
-                        Read Docs
-                    </button>
-                </div>
-            </section>
+            --font-heading: 'Space Grotesk', sans-serif;
+            --font-body: 'Inter', sans-serif;
+            --font-code: 'JetBrains Mono', monospace;
+            
+            --gap-1: 8px;
+            --gap-2: 16px;
+            --gap-3: 24px;
+            --gap-4: 32px;
+            --gap-6: 48px;
+            --gap-8: 64px;
+            --gap-12: 96px;
+        }
 
-            <!-- Interactive Demo Section -->
-            <section id="demo" class="scroll-mt-32">
-                <div class="glass rounded-2xl p-8 border border-white/10 relative overflow-hidden">
-                    <div class="absolute top-0 right-0 p-4 opacity-10 pointer-events-none">
-                        <svg width="200" height="200" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1"><path stroke-linecap="round" stroke-linejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
-                    </div>
-                    
-                    <h2 class="font-space text-3xl font-bold mb-2">Live Distributed Task Grid</h2>
-                    <p class="text-gray-400 mb-8">Simulating WebAssembly payload distribution across 12 logical browser threads.</p>
-                    
-                    <div class="flex flex-col lg:flex-row gap-8">
-                        <div class="flex-1">
-                            <div class="flex gap-4 mb-6">
-                                <button id="startDemoBtn" class="px-4 py-2 bg-azure text-white rounded font-medium hover:bg-blue-400 transition-colors">Deploy Workload</button>
-                                <button id="resetDemoBtn" class="px-4 py-2 glass text-gray-300 rounded font-medium hover:bg-white/10 transition-colors">Reset</button>
-                            </div>
-                            
-                            <div class="grid grid-cols-3 md:grid-cols-4 gap-4" id="taskGrid">
-                                <!-- Nodes generated via JS -->
-                            </div>
-                        </div>
-                        
-                        <div class="w-full lg:w-80 glass rounded-xl p-4 flex flex-col font-mono text-sm h-64 lg:h-auto overflow-hidden">
-                            <div class="text-gray-500 mb-2 pb-2 border-b border-white/10">WASM Execution Log</div>
-                            <div id="demoLog" class="flex-grow overflow-y-auto space-y-1 text-xs">
-                                <div class="text-gray-600">Waiting for workload...</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </section>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
 
-            <!-- Savings Calculator Section -->
-            <section id="calculator" class="scroll-mt-32">
-                <div class="grid md:grid-cols-2 gap-12 items-center">
-                    <div>
-                        <h2 class="font-space text-4xl font-bold mb-6">Cut your Cloud Bill by 90%</h2>
-                        <p class="text-gray-400 mb-6 leading-relaxed">
-                            Stop paying for simple data transformations, image processing, or aggregation tasks on AWS. Use the decentralized compute power of your users.
-                        </p>
-                        
-                        <div class="space-y-6">
-                            <div class="glass p-6 rounded-xl">
-                                <label class="block text-sm font-medium text-gray-300 mb-2">Monthly Lambda Invocations (Millions)</label>
-                                <input type="range" id="invocations" min="1" max="100" value="20" class="w-full accent-solar">
-                                <div class="flex justify-between text-xs text-gray-500 mt-2">
-                                    <span>1M</span>
-                                    <span id="invValue" class="text-solar font-bold">20M</span>
-                                    <span>100M</span>
-                                </div>
-                            </div>
-                            
-                            <div class="glass p-6 rounded-xl">
-                                <label class="block text-sm font-medium text-gray-300 mb-2">Avg. Execution Time (ms)</label>
-                                <input type="range" id="duration" min="100" max="5000" value="1000" step="100" class="w-full accent-solar">
-                                <div class="flex justify-between text-xs text-gray-500 mt-2">
-                                    <span>100ms</span>
-                                    <span id="durValue" class="text-solar font-bold">1000ms</span>
-                                    <span>5000ms</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="glass p-8 rounded-2xl border border-white/10 relative">
-                        <div class="absolute -top-4 -right-4 w-24 h-24 bg-emerald/20 blur-xl rounded-full"></div>
-                        <h3 class="font-space text-xl font-medium text-gray-400 mb-8">Estimated Monthly Cost</h3>
-                        
-                        <div class="space-y-6">
-                            <div class="flex justify-between items-end border-b border-white/10 pb-4">
-                                <div class="text-gray-300">AWS Lambda (1024MB)</div>
-                                <div class="font-mono text-2xl text-red-400">$<span id="awsCost">333</span></div>
-                            </div>
-                            <div class="flex justify-between items-end border-b border-white/10 pb-4">
-                                <div class="text-gray-300">Cloudflare Workers</div>
-                                <div class="font-mono text-2xl text-orange-400">$<span id="cfCost">150</span></div>
-                            </div>
-                            <div class="flex justify-between items-end pt-2">
-                                <div class="text-solar font-bold text-xl">SwarmCompute Mesh</div>
-                                <div class="font-mono text-4xl text-emerald font-bold">$<span id="swarmCost">0</span></div>
-                            </div>
-                        </div>
-                        
-                        <div class="mt-8 p-4 bg-emerald/10 border border-emerald/20 rounded-lg text-emerald text-sm text-center">
-                            You save <strong id="saveAmt">$333</strong> per month.
-                        </div>
-                    </div>
-                </div>
-            </section>
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-muted);
+            font-family: var(--font-body);
+            font-weight: 300;
+            line-height: 1.5;
+            -webkit-font-smoothing: antialiased;
+            overflow-x: hidden;
+            position: relative;
+        }
 
-            <!-- Code Tab Switcher Section -->
-            <section id="how-it-works" class="scroll-mt-32">
-                <div class="text-center mb-12">
-                    <h2 class="font-space text-4xl font-bold mb-4">Dead Simple Integration</h2>
-                    <p class="text-gray-400">Deploy your WebAssembly functions into the swarm with just a few lines of code.</p>
+        /* Grid Background */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            background-image: linear-gradient(var(--border-color) 1px, transparent 1px),
+                              linear-gradient(90deg, var(--border-color) 1px, transparent 1px);
+            background-size: 40px 40px;
+            opacity: 0.05;
+            z-index: -1;
+            pointer-events: none;
+        }
+
+        h1, h2, h3, h4 {
+            font-family: var(--font-heading);
+            color: var(--text-main);
+            font-weight: 700;
+            letter-spacing: -0.02em;
+        }
+
+        h1 { font-size: 80px; line-height: 1.1; }
+        h2 { font-size: 64px; line-height: 1.1; }
+        h3 { font-size: 32px; line-height: 1.3; }
+        h4 { font-size: 24px; line-height: 1.3; }
+        
+        @media (max-width: 768px) {
+            h1 { font-size: 48px; }
+            h2 { font-size: 40px; }
+        }
+
+        p {
+            font-size: 16px;
+            color: var(--text-muted);
+            margin-bottom: var(--gap-2);
+        }
+
+        .lead {
+            font-size: 20px;
+            color: var(--text-muted);
+            max-width: 600px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 var(--gap-3);
+        }
+
+        section {
+            padding: 120px 0;
+            position: relative;
+        }
+        
+        @media (max-width: 768px) {
+            section { padding: 80px 0; }
+        }
+
+        /* Buttons */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            height: 48px;
+            padding: var(--gap-2) var(--gap-4);
+            border-radius: 12px;
+            font-family: var(--font-heading);
+            font-weight: 700;
+            font-size: 16px;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            border: none;
+        }
+
+        .btn-primary {
+            background-color: var(--primary);
+            color: #000;
+            box-shadow: 0 0 20px rgba(250, 204, 21, 0.2);
+        }
+
+        .btn-primary:hover {
+            transform: scale(1.02);
+            box-shadow: 0 0 30px rgba(250, 204, 21, 0.4);
+        }
+
+        .btn-secondary {
+            background-color: var(--card-bg);
+            color: var(--text-main);
+            border: 1px solid var(--border-color);
+        }
+
+        .btn-secondary:hover {
+            background-color: var(--card-hover);
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+
+        /* Nav */
+        nav {
+            position: fixed;
+            top: 0; left: 0; right: 0;
+            height: 64px;
+            background: rgba(17, 24, 39, 0.8);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border-color);
+            z-index: 100;
+            display: flex;
+            align-items: center;
+        }
+
+        .nav-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+        }
+
+        .logo {
+            font-family: var(--font-heading);
+            font-weight: 700;
+            font-size: 20px;
+            color: var(--text-main);
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .logo-dot {
+            width: 10px; height: 10px;
+            background: var(--primary);
+            border-radius: 50%;
+            box-shadow: 0 0 10px var(--primary);
+        }
+
+        .nav-links {
+            display: flex;
+            gap: var(--gap-4);
+        }
+
+        .nav-links a {
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 500;
+            transition: color 0.3s ease;
+        }
+
+        .nav-links a:hover {
+            color: var(--text-main);
+        }
+
+        /* Hero */
+        .hero {
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding-top: 64px; /* offset nav */
+        }
+
+        .hero-content {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: var(--gap-4);
+            max-width: 800px;
+        }
+
+        .hero h1 span {
+            display: inline-block;
+        }
+
+        .hero-actions {
+            display: flex;
+            gap: var(--gap-2);
+            margin-top: var(--gap-2);
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 4px 12px;
+            background: rgba(59, 130, 246, 0.1);
+            border: 1px solid rgba(59, 130, 246, 0.2);
+            border-radius: 9999px;
+            color: var(--secondary);
+            font-size: 12px;
+            font-weight: 500;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            margin-bottom: var(--gap-2);
+        }
+
+        /* Animated Grid / Mesh Visualization */
+        .mesh-container {
+            position: relative;
+            width: 100%;
+            height: 200px;
+            margin-top: var(--gap-6);
+        }
+        
+        .node {
+            position: absolute;
+            width: 12px; height: 12px;
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+        }
+        
+        .node.active {
+            background: var(--tertiary);
+            box-shadow: 0 0 15px var(--tertiary);
+            border-color: transparent;
+        }
+
+        .node.source {
+            width: 24px; height: 24px;
+            background: var(--primary);
+            box-shadow: 0 0 20px var(--primary);
+        }
+
+        /* Metrics */
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: var(--gap-4);
+            text-align: center;
+        }
+
+        .metric-item {
+            padding: var(--gap-6) var(--gap-4);
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+        }
+
+        .metric-value {
+            font-family: var(--font-heading);
+            font-size: 64px;
+            font-weight: 700;
+            color: var(--text-main);
+            line-height: 1;
+            margin-bottom: var(--gap-1);
+        }
+
+        .metric-label {
+            color: var(--text-muted);
+            font-size: 16px;
+            font-weight: 500;
+        }
+
+        /* Cost Comparison */
+        .cost-section {
+            background: linear-gradient(180deg, transparent, rgba(255,255,255,0.01), transparent);
+        }
+
+        .cost-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: var(--gap-4);
+            margin-top: var(--gap-6);
+        }
+
+        .cost-card {
+            padding: var(--gap-6) var(--gap-4);
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            text-align: center;
+        }
+
+        .cost-card.highlight {
+            border-color: var(--primary);
+            box-shadow: 0 0 30px rgba(250, 204, 21, 0.1);
+            position: relative;
+        }
+        
+        .cost-card.highlight::before {
+            content: 'YOUR COST';
+            position: absolute;
+            top: -12px; left: 50%;
+            transform: translateX(-50%);
+            background: var(--primary);
+            color: #000;
+            font-size: 12px;
+            font-weight: 700;
+            padding: 4px 12px;
+            border-radius: 999px;
+        }
+
+        .cost-price {
+            font-family: var(--font-heading);
+            font-size: 48px;
+            color: var(--text-main);
+            margin: var(--gap-2) 0;
+        }
+        
+        .cost-card.highlight .cost-price {
+            color: var(--primary);
+        }
+
+        /* Architecture Steps */
+        .arch-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: var(--gap-4);
+            margin-top: var(--gap-6);
+            position: relative;
+        }
+
+        .arch-step {
+            padding: var(--gap-4);
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            position: relative;
+            z-index: 2;
+        }
+
+        .step-num {
+            font-family: var(--font-code);
+            font-size: 14px;
+            color: var(--secondary);
+            margin-bottom: var(--gap-2);
+            display: block;
+        }
+
+        /* Playground */
+        .playground-container {
+            background: #0D1117;
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            overflow: hidden;
+            margin-top: var(--gap-6);
+        }
+
+        .tabs {
+            display: flex;
+            border-bottom: 1px solid var(--border-color);
+            background: rgba(255,255,255,0.02);
+        }
+
+        .tab {
+            padding: var(--gap-2) var(--gap-4);
+            color: var(--text-muted);
+            font-family: var(--font-code);
+            font-size: 14px;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+        }
+
+        .tab.active {
+            color: var(--text-main);
+            border-bottom-color: var(--primary);
+        }
+
+        .code-block {
+            padding: var(--gap-4);
+            font-family: var(--font-code);
+            font-size: 14px;
+            color: #E2E8F0;
+            overflow-x: auto;
+            display: none;
+        }
+
+        .code-block.active {
+            display: block;
+        }
+        
+        .token-keyword { color: #F87171; }
+        .token-string { color: #A7F3D0; }
+        .token-function { color: #60A5FA; }
+
+        /* Features */
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: var(--gap-4);
+            margin-top: var(--gap-6);
+        }
+
+        .feature-card {
+            padding: var(--gap-6);
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            transition: border-color 0.3s ease;
+        }
+
+        .feature-card:hover {
+            border-color: rgba(255,255,255,0.2);
+        }
+
+        .feature-icon {
+            font-size: 24px;
+            color: var(--primary);
+            margin-bottom: var(--gap-3);
+        }
+
+        /* FAQ */
+        .faq-item {
+            border-bottom: 1px solid var(--border-color);
+            padding: var(--gap-4) 0;
+        }
+        
+        .faq-item h4 {
+            font-size: 20px;
+            margin-bottom: var(--gap-1);
+        }
+
+        /* Pricing */
+        .pricing-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: var(--gap-4);
+            margin-top: var(--gap-6);
+        }
+
+        .price-card {
+            padding: var(--gap-6);
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .price-card.featured {
+            border-color: var(--border-color);
+            background: linear-gradient(180deg, rgba(255,255,255,0.05), var(--card-bg));
+        }
+
+        .price-amount {
+            font-family: var(--font-heading);
+            font-size: 48px;
+            color: var(--text-main);
+            margin: var(--gap-2) 0 var(--gap-4);
+        }
+
+        .price-features {
+            list-style: none;
+            margin-bottom: var(--gap-6);
+            flex-grow: 1;
+        }
+
+        .price-features li {
+            margin-bottom: var(--gap-2);
+            padding-left: 24px;
+            position: relative;
+        }
+
+        .price-features li::before {
+            content: '→';
+            position: absolute;
+            left: 0;
+            color: var(--secondary);
+            font-family: var(--font-code);
+        }
+
+        /* Footer */
+        footer {
+            padding: var(--gap-8) 0;
+            border-top: 1px solid var(--border-color);
+            margin-top: var(--gap-8);
+        }
+
+        .footer-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr;
+            gap: var(--gap-6);
+        }
+
+        .footer-col h4 {
+            font-size: 16px;
+            margin-bottom: var(--gap-3);
+        }
+
+        .footer-col ul {
+            list-style: none;
+        }
+
+        .footer-col a {
+            color: var(--text-muted);
+            text-decoration: none;
+            display: block;
+            margin-bottom: var(--gap-1);
+            transition: color 0.3s ease;
+        }
+
+        .footer-col a:hover {
+            color: var(--text-main);
+        }
+        
+        .reveal-elem {
+            opacity: 0;
+            transform: translateY(60px);
+        }
+    </style>
+</head>
+<body>
+
+    <nav>
+        <div class="container nav-content">
+            <a href="#" class="logo">
+                <span class="logo-dot"></span>
+                SwarmCompute
+            </a>
+            <div class="nav-links">
+                <a href="#how-it-works">Architecture</a>
+                <a href="#features">Features</a>
+                <a href="#pricing">Pricing</a>
+                <a href="https://github.com/swarmcompute" target="_blank" class="btn btn-secondary" style="height: 36px; padding: 0 16px;">GitHub</a>
+            </div>
+        </div>
+    </nav>
+
+    <main>
+        <section class="hero">
+            <div class="container hero-content">
+                <div class="badge">WASM Compute Mesh</div>
+                <h1 id="hero-title">Turn every browser into a compute node.</h1>
+                <p class="lead" id="hero-desc">Distribute WASM workloads instantly across edge devices. Zero servers. Infinite scale. The true serverless architecture.</p>
+                <div class="hero-actions" id="hero-btns">
+                    <a href="#pricing" class="btn btn-primary">Start Building</a>
+                    <a href="#how-it-works" class="btn btn-secondary">Read Docs</a>
                 </div>
                 
-                <div class="glass rounded-xl overflow-hidden border border-white/10 max-w-4xl mx-auto">
-                    <div class="flex border-b border-white/10 bg-white/5">
-                        <button class="px-6 py-3 text-sm font-medium text-solar border-b-2 border-solar tab-btn" data-target="tab-init">Init Mesh</button>
-                        <button class="px-6 py-3 text-sm font-medium text-gray-400 hover:text-gray-200 tab-btn" data-target="tab-wasm">Rust WASM</button>
-                        <button class="px-6 py-3 text-sm font-medium text-gray-400 hover:text-gray-200 tab-btn" data-target="tab-dispatch">Dispatch Task</button>
+                <div class="mesh-container" id="mesh-viz">
+                    <!-- Nodes injected via JS -->
+                </div>
+            </div>
+        </section>
+
+        <section class="metrics">
+            <div class="container">
+                <div class="metrics-grid">
+                    <div class="metric-item reveal-elem">
+                        <div class="metric-value"><span class="counter" data-target="0">0</span></div>
+                        <div class="metric-label">Servers to Manage</div>
                     </div>
-                    
-                    <div class="p-6 font-mono text-sm overflow-x-auto bg-[#0d1117]">
-                        <pre id="tab-init" class="text-gray-300 tab-content block"><code>import { SwarmMesh } from '@swarmcompute/client';
-
-// Initialize the P2P connection to the swarm router
-const mesh = new SwarmMesh({
-  apiKey: 'sc_live_xxxxx',
-  maxThreads: navigator.hardwareConcurrency || 4,
-  memoryLimit: '512MB'
-});
-
-await mesh.connect();
-console.log('Node joined the swarm network.');</code></pre>
-
-                        <pre id="tab-wasm" class="text-gray-300 tab-content hidden"><code>#[wasm_bindgen]
-pub fn process_image_chunk(data: &[u8], filter: &str) -> Vec&lt;u8&gt; {
-    // Heavy computation running in browser sandbox
-    let mut image = image::load_from_memory(data).unwrap();
-    
-    if filter == "grayscale" {
-        image = image.grayscale();
-    }
-    
-    let mut output = Vec::new();
-    image.write_to(&mut output, image::ImageOutputFormat::Png).unwrap();
-    
-    output
-}</code></pre>
-
-                        <pre id="tab-dispatch" class="text-gray-300 tab-content hidden"><code>// Dispatch workload to the mesh network
-const imageBuffer = await fetch('/large-image.raw').then(r => r.arrayBuffer());
-
-// Automatically chunks and distributes across available nodes
-const result = await mesh.dispatch('process_image_chunk', {
-  payload: imageBuffer,
-  args: ['grayscale'],
-  distributeStrategy: 'scatter-gather'
-});
-
-renderImage(result.assembledPayload);</code></pre>
+                    <div class="metric-item reveal-elem">
+                        <div class="metric-value"><span class="counter" data-target="98">0</span>%</div>
+                        <div class="metric-label">Native Speed (WASM)</div>
+                    </div>
+                    <div class="metric-item reveal-elem">
+                        <div class="metric-value"><span class="counter" data-target="100">0</span>%</div>
+                        <div class="metric-label">Distributed Network</div>
                     </div>
                 </div>
-            </section>
+            </div>
+        </section>
 
-        </div>
+        <section class="cost-section" id="cost">
+            <div class="container">
+                <div class="text-center reveal-elem" style="text-align: center; margin-bottom: var(--gap-6);">
+                    <h2>The best free alternative to AWS Lambda.</h2>
+                    <p class="lead" style="margin: 0 auto;">Why pay for idle compute when millions of browsers sit idle?</p>
+                </div>
+                
+                <div class="cost-grid">
+                    <div class="cost-card reveal-elem">
+                        <h4>AWS Lambda</h4>
+                        <div class="cost-price">$96K<span style="font-size: 16px; color: var(--text-muted);">/yr</span></div>
+                        <p>At 1B invocations/mo</p>
+                    </div>
+                    <div class="cost-card highlight reveal-elem">
+                        <h4>SwarmCompute</h4>
+                        <div class="cost-price">$0<span style="font-size: 16px; color: var(--text-muted);">/yr</span></div>
+                        <p>Leverage client browsers</p>
+                    </div>
+                    <div class="cost-card reveal-elem">
+                        <h4>Cloudflare Workers</h4>
+                        <div class="cost-price">$6K<span style="font-size: 16px; color: var(--text-muted);">/yr</span></div>
+                        <p>At 1B invocations/mo</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="how-it-works">
+            <div class="container">
+                <h2 class="reveal-elem">How it works</h2>
+                
+                <div class="arch-grid">
+                    <div class="arch-step reveal-elem">
+                        <span class="step-num">01. Submit</span>
+                        <h4>Task Queue</h4>
+                        <p>Client submits a WASM module and payload to the Swarm router.</p>
+                    </div>
+                    <div class="arch-step reveal-elem">
+                        <span class="step-num">02. Distribute</span>
+                        <h4>Mesh Routing</h4>
+                        <p>Router streams the task to available browser worker nodes via WebRTC.</p>
+                    </div>
+                    <div class="arch-step reveal-elem">
+                        <span class="step-num">03. Execute</span>
+                        <h4>WASM Sandbox</h4>
+                        <p>Workers execute the WASM binary safely in a background Web Worker.</p>
+                    </div>
+                    <div class="arch-step reveal-elem">
+                        <span class="step-num">04. Collect</span>
+                        <h4>Aggregation</h4>
+                        <p>Results are validated, merged, and returned to the origin.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="playground">
+            <div class="container reveal-elem">
+                <h2>Integration in seconds.</h2>
+                
+                <div class="playground-container">
+                    <div class="tabs">
+                        <div class="tab active" data-tab="tab-init">Initialize Router</div>
+                        <div class="tab" data-tab="tab-submit">Submit Task</div>
+                        <div class="tab" data-tab="tab-worker">Worker Node</div>
+                    </div>
+                    
+                    <div class="code-block active" id="tab-init">
+<pre><code><span class="token-keyword">import</span> { SwarmRouter } <span class="token-keyword">from</span> <span class="token-string">'@swarmcompute/core'</span>;
+
+<span class="token-keyword">const</span> router = <span class="token-keyword">new</span> SwarmRouter({
+  poolSize: <span class="token-string">'auto'</span>,
+  wasmOpts: { memory: <span class="token-string">'512MB'</span> }
+});
+
+<span class="token-keyword">await</span> router.<span class="token-function">start</span>();</code></pre>
+                    </div>
+                    
+                    <div class="code-block" id="tab-submit">
+<pre><code><span class="token-keyword">const</span> task = <span class="token-keyword">await</span> router.<span class="token-function">dispatch</span>({
+  wasm: <span class="token-string">'./image-processor.wasm'</span>,
+  payload: imageData,
+  splitStrategy: <span class="token-string">'chunk-8kb'</span>
+});
+
+task.on(<span class="token-string">'progress'</span>, (p) => console.log(p));
+<span class="token-keyword">const</span> result = <span class="token-keyword">await</span> task.result;</code></pre>
+                    </div>
+                    
+                    <div class="code-block" id="tab-worker">
+<pre><code><span class="token-keyword">import</span> { SwarmWorker } <span class="token-keyword">from</span> <span class="token-string">'@swarmcompute/client'</span>;
+
+<span class="token-comment">// Drop this snippet in your web app to contribute compute</span>
+<span class="token-keyword">const</span> worker = <span class="token-keyword">new</span> SwarmWorker({
+  maxCpuUsage: 0.2, <span class="token-comment">// Use up to 20% CPU quietly</span>
+  routerId: <span class="token-string">'your-mesh-id'</span>
+});
+
+worker.<span class="token-function">join</span>();</code></pre>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="features">
+            <div class="container">
+                <h2 class="reveal-elem">Enterprise-grade capabilities.</h2>
+                
+                <div class="features-grid">
+                    <div class="feature-card reveal-elem">
+                        <div class="feature-icon">⚡</div>
+                        <h4>WASM Native</h4>
+                        <p>Supports Rust, Go, C++, and AssemblyScript via WebAssembly with near-native performance.</p>
+                    </div>
+                    <div class="feature-card reveal-elem">
+                        <div class="feature-icon">📈</div>
+                        <h4>Infinite Auto-scale</h4>
+                        <p>No cold starts. As your user base grows, your compute capacity grows proportionally.</p>
+                    </div>
+                    <div class="feature-card reveal-elem">
+                        <div class="feature-icon">🛡️</div>
+                        <h4>Fault Tolerant</h4>
+                        <p>Automatic retry and state-reconciliation if a client node disconnects mid-execution.</p>
+                    </div>
+                    <div class="feature-card reveal-elem">
+                        <div class="feature-icon">🎮</div>
+                        <h4>WebGPU Support</h4>
+                        <p>Access client GPU resources for parallel processing and AI inference workloads.</p>
+                    </div>
+                    <div class="feature-card reveal-elem">
+                        <div class="feature-icon">🌊</div>
+                        <h4>Streaming Data</h4>
+                        <p>Stream large datasets directly to worker nodes without buffering on central servers.</p>
+                    </div>
+                    <div class="feature-card reveal-elem">
+                        <div class="feature-icon">💾</div>
+                        <h4>Edge Caching</h4>
+                        <p>WASM modules are cached aggressively via IndexedDB on client devices.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="faq">
+            <div class="container">
+                <h2 class="reveal-elem">Frequently Asked Questions</h2>
+                <div style="max-width: 800px; margin-top: var(--gap-4);">
+                    <div class="faq-item reveal-elem">
+                        <h4>Is this a free alternative to AWS Lambda?</h4>
+                        <p>Yes. By utilizing the unused compute power of your visitors' browsers, you completely bypass server-side execution costs, making it the best free alternative to AWS Lambda for distributed, parallelizable tasks.</p>
+                    </div>
+                    <div class="faq-item reveal-elem">
+                        <h4>Is it secure to run code on client devices?</h4>
+                        <p>WASM operates within a strict memory-safe sandbox. The code cannot access the DOM, cookies, or local storage of the host site unless explicitly granted.</p>
+                    </div>
+                    <div class="faq-item reveal-elem">
+                        <h4>What happens if a user closes their tab?</h4>
+                        <p>The Swarm Router detects node disconnections instantly and automatically re-routes the pending chunk to another available node in the mesh.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="pricing">
+            <div class="container">
+                <h2 class="reveal-elem">Pricing (BSL 1.1)</h2>
+                <p class="lead reveal-elem">Self-host for free, or use our managed routers.</p>
+                
+                <div class="pricing-grid">
+                    <div class="price-card reveal-elem">
+                        <h4>Startup</h4>
+                        <div class="price-amount">$399<span style="font-size: 16px; color: var(--text-muted);">/mo</span></div>
+                        <ul class="price-features">
+                            <li>Managed Router</li>
+                            <li>Up to 100k active nodes</li>
+                            <li>Standard SLA</li>
+                            <li>Community support</li>
+                        </ul>
+                        <a href="#" class="btn btn-secondary">Get Started</a>
+                    </div>
+                    <div class="price-card featured reveal-elem">
+                        <h4>Scale</h4>
+                        <div class="price-amount">$2,999<span style="font-size: 16px; color: var(--text-muted);">/mo</span></div>
+                        <ul class="price-features">
+                            <li>Dedicated Routers</li>
+                            <li>Up to 1M active nodes</li>
+                            <li>WebGPU support</li>
+                            <li>Priority support</li>
+                        </ul>
+                        <a href="#" class="btn btn-primary">Choose Scale</a>
+                    </div>
+                    <div class="price-card reveal-elem">
+                        <h4>Enterprise</h4>
+                        <div class="price-amount">$14,999<span style="font-size: 16px; color: var(--text-muted);">/mo</span></div>
+                        <ul class="price-features">
+                            <li>On-premise deployment</li>
+                            <li>Unlimited nodes</li>
+                            <li>Custom WebRTC signaling</li>
+                            <li>24/7 dedicated support</li>
+                        </ul>
+                        <a href="#" class="btn btn-secondary">Contact Sales</a>
+                    </div>
+                </div>
+            </div>
+        </section>
     </main>
 
-    <footer class="glass border-t border-white/10 mt-20">
-        <div class="max-w-7xl mx-auto px-6 py-12 flex flex-col md:flex-row justify-between items-center gap-6">
-            <div class="flex items-center gap-2 font-space font-bold text-xl">
-                <span class="text-solar">Swarm</span>Compute
-            </div>
-            
-            <div class="text-sm text-gray-500 text-center md:text-left space-y-1">
-                <p>&copy; 2026 SwarmCompute Network.</p>
-                <p>Designed by <span class="text-gray-300 font-medium">Soumya Debnath</span></p>
-                <p>Email: <a href="mailto:soumyadebnath1661@gmail.com" class="hover:text-solar">soumyadebnath1661@gmail.com</a> | Phone: +91 7031648617</p>
-                <p class="pt-2 text-xs">Licensed under BSL 1.1. Free for non-commercial and up to 10M monthly mesh invocations.</p>
-            </div>
-            
-            <div class="flex gap-4">
-                <a href="#" class="text-gray-400 hover:text-white transition-colors">
-                    <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"></path></svg>
-                </a>
+    <footer>
+        <div class="container">
+            <div class="footer-grid">
+                <div class="footer-col">
+                    <a href="#" class="logo" style="margin-bottom: var(--gap-2);">
+                        <span class="logo-dot"></span>
+                        SwarmCompute
+                    </a>
+                    <p>Distributed Browser-Based WASM Compute Mesh.<br>Licensed under BSL 1.1.</p>
+                </div>
+                <div class="footer-col">
+                    <h4>Resources</h4>
+                    <ul>
+                        <li><a href="#">Documentation</a></li>
+                        <li><a href="#">GitHub</a></li>
+                        <li><a href="#">Examples</a></li>
+                    </ul>
+                </div>
+                <div class="footer-col">
+                    <h4>Company</h4>
+                    <ul>
+                        <li><a href="#">About</a></li>
+                        <li><a href="#">Blog</a></li>
+                        <li><a href="#">Security</a></li>
+                    </ul>
+                </div>
             </div>
         </div>
     </footer>
 
-    <!-- Interactive Scripts -->
     <script>
-        // Tab Switcher
-        const tabs = document.querySelectorAll('.tab-btn');
-        const contents = document.querySelectorAll('.tab-content');
-        
-        tabs.forEach(tab => {
+        // GSAP Animations
+        gsap.registerPlugin(ScrollTrigger);
+
+        // Hero split text animation logic (simple implementation)
+        const title = document.getElementById('hero-title');
+        const text = title.innerText;
+        title.innerHTML = '';
+        text.split('').forEach(char => {
+            const span = document.createElement('span');
+            span.innerText = char === ' ' ? '\u00A0' : char;
+            title.appendChild(span);
+        });
+
+        const tl = gsap.timeline();
+        tl.from('#hero-title span', {
+            opacity: 0,
+            y: 50,
+            duration: 0.8,
+            stagger: 0.02,
+            ease: "power3.out"
+        })
+        .from('#hero-desc', { opacity: 0, y: 20, duration: 0.8, ease: "power3.out" }, "-=0.4")
+        .from('#hero-btns', { opacity: 0, y: 20, duration: 0.8, ease: "power3.out" }, "-=0.6");
+
+        // Reveal Elements on Scroll
+        gsap.utils.toArray('.reveal-elem').forEach(elem => {
+            gsap.to(elem, {
+                scrollTrigger: {
+                    trigger: elem,
+                    start: "top 85%",
+                },
+                y: 0,
+                opacity: 1,
+                duration: 1,
+                ease: "power3.out"
+            });
+        });
+
+        // Counter Animation
+        gsap.utils.toArray('.counter').forEach(counter => {
+            const target = +counter.getAttribute('data-target');
+            
+            ScrollTrigger.create({
+                trigger: counter,
+                start: "top 85%",
+                onEnter: () => {
+                    let count = { val: 0 };
+                    gsap.to(count, {
+                        val: target,
+                        duration: 2,
+                        ease: "power3.out",
+                        onUpdate: function() {
+                            counter.innerText = Math.floor(count.val);
+                        }
+                    });
+                },
+                once: true
+            });
+        });
+
+        // Tabs Logic
+        document.querySelectorAll('.tab').forEach(tab => {
             tab.addEventListener('click', () => {
-                // reset styling
-                tabs.forEach(t => {
-                    t.classList.remove('text-solar', 'border-b-2', 'border-solar');
-                    t.classList.add('text-gray-400');
-                });
-                // set active
-                tab.classList.remove('text-gray-400');
-                tab.classList.add('text-solar', 'border-b-2', 'border-solar');
+                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.code-block').forEach(c => c.classList.remove('active'));
                 
-                // hide all contents
-                contents.forEach(c => {
-                    c.classList.remove('block');
-                    c.classList.add('hidden');
-                });
-                
-                // show target
-                document.getElementById(tab.dataset.target).classList.remove('hidden');
-                document.getElementById(tab.dataset.target).classList.add('block');
+                tab.classList.add('active');
+                document.getElementById(tab.getAttribute('data-tab')).classList.add('active');
             });
         });
 
-        // Calculator Logic
-        const invInput = document.getElementById('invocations');
-        const durInput = document.getElementById('duration');
-        const invValue = document.getElementById('invValue');
-        const durValue = document.getElementById('durValue');
-        const awsCostEl = document.getElementById('awsCost');
-        const cfCostEl = document.getElementById('cfCost');
-        const saveAmtEl = document.getElementById('saveAmt');
-
-        function updateCost() {
-            const inv = parseInt(invInput.value); // Millions
-            const dur = parseInt(durInput.value); // ms
-
-            invValue.innerText = inv + 'M';
-            durValue.innerText = dur + 'ms';
-
-            // AWS Lambda rough calculation (1024MB memory)
-            // Compute charge: $0.0000166667 per GB-second
-            // Requests: $0.20 per 1M requests
-            const reqCost = inv * 0.20;
-            const computeSecs = inv * 1000000 * (dur / 1000);
-            const computeCost = computeSecs * 0.0000166667;
-            const aws = Math.round(reqCost + computeCost);
-
-            // CF Workers rough calculation
-            // Unbound: $0.15/1M req + $12.50/M GB-s
-            const cfReq = inv * 0.15;
-            const cfCompute = computeSecs * (12.50 / 1000000); 
-            const cf = Math.round(cfReq + cfCompute);
-
-            awsCostEl.innerText = aws.toLocaleString();
-            cfCostEl.innerText = cf.toLocaleString();
-            saveAmtEl.innerText = '$' + aws.toLocaleString();
-        }
-
-        invInput.addEventListener('input', updateCost);
-        durInput.addEventListener('input', updateCost);
-        updateCost();
-
-        // Interactive WASM Grid Demo
-        const grid = document.getElementById('taskGrid');
-        const log = document.getElementById('demoLog');
-        const startBtn = document.getElementById('startDemoBtn');
-        const resetBtn = document.getElementById('resetDemoBtn');
+        // Mesh Visualization
+        const meshContainer = document.getElementById('mesh-viz');
         
-        // Generate 12 nodes
-        for(let i=0; i<12; i++) {
+        // Source node
+        const sourceNode = document.createElement('div');
+        sourceNode.className = 'node source';
+        sourceNode.style.left = '50%';
+        sourceNode.style.top = '50%';
+        meshContainer.appendChild(sourceNode);
+
+        // Generate worker nodes
+        const nodes = [];
+        for(let i=0; i<30; i++) {
             const node = document.createElement('div');
-            node.className = 'task-node h-16 rounded bg-white/5 border border-white/10 flex items-center justify-center font-mono text-xs text-gray-500';
-            node.innerText = `Node ${i+1}`;
-            node.id = `node-${i}`;
-            grid.appendChild(node);
+            node.className = 'node';
+            
+            // Random position outside center
+            const angle = Math.random() * Math.PI * 2;
+            const radius = 40 + Math.random() * 120;
+            const x = 50 + (Math.cos(angle) * radius) / (meshContainer.offsetWidth/100);
+            const y = 50 + (Math.sin(angle) * radius) / (meshContainer.offsetHeight/100);
+            
+            node.style.left = `${x}%`;
+            node.style.top = `${y}%`;
+            meshContainer.appendChild(node);
+            nodes.push(node);
         }
 
-        function addLog(msg, color = 'text-gray-300') {
-            const entry = document.createElement('div');
-            const time = new Date().toISOString().split('T')[1].slice(0, 12);
-            entry.innerHTML = `<span class="text-gray-600">[${time}]</span> <span class="${color}">${msg}</span>`;
-            log.appendChild(entry);
-            log.scrollTop = log.scrollHeight;
-        }
+        // Animate tasks dispatching
+        setInterval(() => {
+            const randomNode = nodes[Math.floor(Math.random() * nodes.length)];
+            randomNode.classList.add('active');
+            setTimeout(() => randomNode.classList.remove('active'), 500);
+        }, 300);
 
-        let isRunning = false;
-        let timeouts = [];
-
-        startBtn.addEventListener('click', () => {
-            if(isRunning) return;
-            isRunning = true;
-            log.innerHTML = '';
-            addLog('Initializing payload chunking...', 'text-azure');
-            
-            const nodes = document.querySelectorAll('.task-node');
-            nodes.forEach(n => {
-                n.classList.remove('processing', 'complete');
-                n.classList.add('bg-white/5');
-            });
-
-            timeouts.push(setTimeout(() => {
-                addLog('Dispatching WASM binaries to mesh nodes...', 'text-solar');
-                
-                nodes.forEach((node, i) => {
-                    const delay = Math.random() * 1000;
-                    const procTime = 1500 + Math.random() * 2000;
-                    
-                    timeouts.push(setTimeout(() => {
-                        node.classList.add('processing');
-                        node.classList.remove('text-gray-500');
-                        node.classList.add('text-solar');
-                        node.innerText = `WASM_EXEC`;
-                        addLog(`Node ${i+1} received chunk. Executing...`);
-                        
-                        timeouts.push(setTimeout(() => {
-                            node.classList.remove('processing');
-                            node.classList.add('complete', 'text-emerald');
-                            node.classList.remove('text-solar');
-                            node.innerText = `DONE_OK`;
-                            addLog(`Node ${i+1} completed task. Returned 4096 bytes.`, 'text-emerald');
-                            
-                            // Check if all done
-                            if(document.querySelectorAll('.task-node.complete').length === 12) {
-                                timeouts.push(setTimeout(() => {
-                                    addLog('All nodes completed. Assembling final payload...', 'text-azure');
-                                    addLog('WORKLOAD FINISHED.', 'text-white font-bold');
-                                    isRunning = false;
-                                }, 500));
-                            }
-                        }, procTime));
-                        
-                    }, delay));
-                });
-            }, 800));
-        });
-
-        resetBtn.addEventListener('click', () => {
-            timeouts.forEach(t => clearTimeout(t));
-            timeouts = [];
-            isRunning = false;
-            log.innerHTML = '<div class="text-gray-600">Waiting for workload...</div>';
-            
-            const nodes = document.querySelectorAll('.task-node');
-            nodes.forEach((n, i) => {
-                n.className = 'task-node h-16 rounded bg-white/5 border border-white/10 flex items-center justify-center font-mono text-xs text-gray-500';
-                n.innerText = `Node ${i+1}`;
-            });
-        });
     </script>
 </body>
 </html>
