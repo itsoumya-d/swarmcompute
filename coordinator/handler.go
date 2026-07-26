@@ -47,6 +47,7 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 		}
 		
 		if m.Type == "submit_task" && m.Task != nil {
+			m.Type = "task_assigned"
 			scheduler.broadcast <- m
 		} else if m.Type == "task_result" && m.Result != nil {
 			scheduler.broadcast <- m

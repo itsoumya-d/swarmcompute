@@ -1,5 +1,14 @@
-import { Task, TaskResult, WorkUnit } from './types';
+import { Task, TaskResult } from './types';
 import { CoordinatorClient } from './coordinator-client';
+
+function arrayBufferToBase64(buffer: ArrayBuffer): string {
+  let binary = '';
+  const bytes = new Uint8Array(buffer);
+  for (let i = 0; i < bytes.byteLength; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return btoa(binary);
+}
 
 export class TaskScheduler {
   private client: CoordinatorClient;
@@ -11,11 +20,12 @@ export class TaskScheduler {
   async submitTask(task: Task): Promise<TaskResult> {
     return new Promise((resolve, reject) => {
        const handler = (msg: any) => {
-         if (msg.type === 'task_complete' && msg.taskId === task.id) {
+         if (msg.type === 'task_result' && msg.result.taskId === task.id) {
+            this.client.off('message', handler);
             resolve({
               taskId: task.id,
-              result: msg.result,
-              executionTimeMs: msg.executionTimeMs || 0
+              result: msg.result.result,
+              executionTimeMs: msg.result.executionTimeMs || 0
             });
          }
        };
@@ -25,7 +35,8 @@ export class TaskScheduler {
          type: 'submit_task',
          task: {
            id: task.id,
-           input: task.input
+           input: task.input,
+           wasmModule: arrayBufferToBase64(task.wasmModule)
          }
        });
     });

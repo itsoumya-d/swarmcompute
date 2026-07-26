@@ -20,6 +20,13 @@ export class SwarmCompute extends EventEmitter {
       if (msg.type === 'task_assigned') {
         this.emit('task_assigned', msg.task);
         if (this.workerPool.getIsWorker()) {
+           const wasmModuleBase64 = msg.task.wasmModule;
+           const binaryString = atob(wasmModuleBase64);
+           const bytes = new Uint8Array(binaryString.length);
+           for (let i = 0; i < binaryString.length; i++) {
+               bytes[i] = binaryString.charCodeAt(i);
+           }
+           msg.task.wasmModule = bytes.buffer;
            this.processTask(msg.task);
         }
       } else if (msg.type === 'worker_count') {

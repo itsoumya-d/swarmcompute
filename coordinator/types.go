@@ -4,6 +4,7 @@ type Task struct {
 	ID        string      `json:"id"`
 	Input     interface{} `json:"input"`
 	TimeoutMs int         `json:"timeoutMs"`
+	WasmModule string     `json:"wasmModule"`
 }
 
 type TaskResult struct {
