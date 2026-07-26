@@ -1,18 +1,19 @@
 User-agent: *
-Allow: /
+Disallow:
 
-# Allow all major AI bots and crawlers explicitly
 User-agent: GPTBot
 Allow: /
+
 User-agent: PerplexityBot
 Allow: /
+
 User-agent: ClaudeBot
 Allow: /
+
 User-agent: Google-Extended
 Allow: /
+
 User-agent: Bingbot
-Allow: /
-User-agent: CCBot
 Allow: /
 
 Sitemap: https://itsoumya-d.github.io/swarmcompute/sitemap.xml
