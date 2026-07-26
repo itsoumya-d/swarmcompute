@@ -1,3 +1,4 @@
+import { LicenseValidator } from "./license-validator";
 // Copyright (c) 2024-2026 Soumya Debnath. All Rights Reserved.
 // Licensed under the Business Source License 1.1 (BSL 1.1).
 // See LICENSE file for details. Production use requires a paid license.
@@ -15,7 +16,9 @@ export class SwarmCompute extends EventEmitter {
   private workerPool: WorkerPool;
   private taskScheduler: TaskScheduler;
 
-  constructor(coordinatorUrl: string) {
+  constructor(options?: any) {
+    LicenseValidator.validate(options);
+    // constructor(coordinatorUrl: string) {
     super();
     this.client = new CoordinatorClient(coordinatorUrl);
     this.workerPool = new WorkerPool(this.client);
