@@ -28,7 +28,7 @@ export class WasmRunner {
 
       try {
         const module = await WebAssembly.compile(unit.wasmModule);
-        const memory = new WebAssembly.Memory({ initial: 10, maximum: 100 });
+        const memory = new WebAssembly.Memory({ initial: 10, maximum: 50 });
         const instance = await WebAssembly.instantiate(module, {
           env: { memory }
         });
