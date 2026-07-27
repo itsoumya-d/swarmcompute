@@ -75,6 +75,9 @@ export class PeerTransport {
       ]
     });
 
+    // Register peer IMMEDIATELY so ICE candidates arriving before ondatachannel aren't dropped
+    this.peers.set(peerId, { pc, dc: null as any });
+
     pc.ondatachannel = (event) => {
       const dc = event.channel;
       dc.binaryType = 'arraybuffer';
