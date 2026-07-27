@@ -120,12 +120,17 @@ export class PeerTransport {
   private setupDataChannel(dc: RTCDataChannel, peerId: string): void {
     dc.onmessage = (event) => {
       if (event.data instanceof ArrayBuffer) {
+        if (event.data.byteLength < 9) return; // Header size check
         const view = new DataView(event.data);
         const type = view.getUint8(0);
         
         if (type === 1) { // Task
           const wasmLength = view.getUint32(1);
           const inputLength = view.getUint32(5);
+          if (event.data.byteLength < 9 + wasmLength + inputLength) {
+            console.warn('SwarmCompute: Malformed P2P task payload length');
+            return;
+          }
           const wasmBinary = event.data.slice(9, 9 + wasmLength);
           const inputData = event.data.slice(9 + wasmLength, 9 + wasmLength + inputLength);
           if (this.taskCallback) {
@@ -143,6 +148,20 @@ export class PeerTransport {
         }
       }
     };
+  }
+
+  private safeSend(dc: RTCDataChannel, data: ArrayBuffer | string): void {
+    try {
+      if (dc.readyState !== 'open') return;
+      if (dc.bufferedAmount > 65536) {
+        dc.bufferedAmountLowThreshold = 16384;
+        dc.addEventListener('bufferedamountlow', () => {
+          try { dc.send(data as any); } catch {}
+        }, { once: true });
+        return;
+      }
+      dc.send(data as any);
+    } catch {}
   }
 
   async sendTask(peerId: string, wasmBinary: ArrayBuffer, inputData: ArrayBuffer): Promise<void> {
@@ -163,13 +182,13 @@ export class PeerTransport {
     u8.set(new Uint8Array(wasmBinary), headerSize);
     u8.set(new Uint8Array(inputData), headerSize + wasmBinary.byteLength);
     
-    peer.dc.send(buffer);
+    this.safeSend(peer.dc, buffer);
   }
   
   sendTaskResult(peerId: string, result: any): void {
     const peer = this.peers.get(peerId);
     if (peer && peer.dc.readyState === 'open') {
-        peer.dc.send(JSON.stringify({ type: 'task_result', result }));
+      this.safeSend(peer.dc, JSON.stringify({ type: 'task_result', result }));
     }
   }
 
