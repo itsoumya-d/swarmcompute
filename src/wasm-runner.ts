@@ -8,6 +8,7 @@ import { WorkUnit, WorkUnitResult } from './types';
 export class WasmRunner {
   static async run(unit: WorkUnit): Promise<WorkUnitResult> {
     const startTime = performance.now();
+    let memoryBytes = 0;
     
     return new Promise(async (resolve) => {
       let isDone = false;
@@ -27,15 +28,31 @@ export class WasmRunner {
 
       try {
         const module = await WebAssembly.compile(unit.wasmModule);
+        const memory = new WebAssembly.Memory({ initial: 10, maximum: 100 });
         const instance = await WebAssembly.instantiate(module, {
-          env: {}
+          env: { memory }
         });
+
+        // Write input data to WASM linear memory if provided
+        let inputLen = 0;
+        if (unit.input instanceof ArrayBuffer) {
+          inputLen = unit.input.byteLength;
+          const inputView = new Uint8Array(unit.input);
+          const memView = new Uint8Array(memory.buffer);
+          memView.set(inputView, 0); // Write at offset 0
+        }
 
         let output = null;
         if (instance.exports && typeof instance.exports.run === 'function') {
            // @ts-ignore
-           output = instance.exports.run();
+           const outputLen = instance.exports.run(inputLen);
+           if (typeof outputLen === 'number') {
+             output = memory.buffer.slice(0, outputLen);
+           }
         }
+
+        memoryBytes = memory.buffer.byteLength;
+        const durationMs = performance.now() - startTime;
 
         if (!isDone) {
           isDone = true;
@@ -43,8 +60,14 @@ export class WasmRunner {
           resolve({
             workUnitId: unit.id,
             taskId: unit.taskId,
-            result: output,
-            executionTimeMs: performance.now() - startTime
+            result: {
+              output: output as ArrayBuffer,
+              metrics: {
+                durationMs,
+                memoryBytes
+              }
+            },
+            executionTimeMs: durationMs
           });
         }
       } catch (err: any) {

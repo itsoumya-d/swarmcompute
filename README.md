@@ -1,3 +1,10 @@
+<!--
+// Copyright (c) 2024-2026 Soumya Debnath. All Rights Reserved.
+// Licensed under the Business Source License 1.1 (BSL 1.1).
+// See LICENSE file for details. Production use requires a paid license.
+// Contact: soumyadebnath1661@gmail.com | +91 7031648617
+-->
+
 # SwarmCompute
 
 ![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)
@@ -10,16 +17,17 @@ SwarmCompute is a revolutionary peer-to-peer compute grid that utilizes idle bro
 ## Table of Contents
 1. [What Problem it Solves](#what-problem-it-solves)
 2. [Architecture](#architecture)
-3. [API Reference](#api-reference)
-4. [Usage Examples](#usage-examples)
-5. [How it Works Internally](#how-it-works-internally)
-6. [Comparison with Competitors](#comparison-with-competitors)
-7. [Security Model](#security-model)
-8. [Performance Benchmarks](#performance-benchmarks)
-9. [Deployment Guide](#deployment-guide)
-10. [Configuration Options](#configuration-options)
-11. [FAQ](#faq)
-12. [Author & License](#author--license)
+3. [Next-Gen Swarm Architecture](#-next-gen-swarm-architecture--research-features)
+4. [API Reference](#api-reference)
+5. [Usage Examples](#usage-examples)
+6. [How it Works Internally](#how-it-works-internally)
+7. [Comparison with Competitors](#comparison-with-competitors)
+8. [Security Model](#security-model)
+9. [Performance Benchmarks](#performance-benchmarks)
+10. [Deployment Guide](#deployment-guide)
+11. [Configuration Options](#configuration-options)
+12. [FAQ](#faq)
+13. [Author & License](#author--license)
 
 ## What Problem it Solves
 
@@ -56,6 +64,43 @@ graph TD
 1. **Submitter Node**: Any client (often mobile) that submits a task along with its compiled WebAssembly module and inputs.
 2. **Coordinator**: A lightweight Go WebSocket server that manages node discovery, maintains the worker pool count, and routes tasks to available workers.
 3. **Worker Nodes**: Desktop browsers connected to the swarm that automatically execute assigned WebAssembly modules in a secure sandbox.
+
+---
+
+## 🔬 Next-Gen Swarm Architecture & Research Features
+
+SwarmCompute leverages modern WebAssembly component models and peer-to-peer transport primitives to deliver serverless computing directly on user hardware.
+
+### 🌐 P2P Task Distribution (WebRTC DataChannel + Coordinator Fallback)
+- **Direct P2P Task Offloading**: Submitter nodes send WASM binaries and input payloads directly to worker peers via WebRTC DataChannels, eliminating backend bandwidth bottlenecks.
+- **Resilient Coordinator Fallback**: If WebRTC peer connections are obstructed by restrictive enterprise firewalls or symmetric NATs, task execution seamlessly falls back to WebSocket relaying via the Go coordinator server.
+
+### ⚡ WASM Linear Memory I/O & Execution Metrics
+- **Linear Memory Data Passing**: Zero-copy data exchange directly reading and writing WebAssembly linear memory (`WebAssembly.Memory`), enabling high-throughput ArrayBuffer data transfers for numerical and image processing workloads.
+- **Real-Time Execution Profiling**: Captures precise execution duration, memory allocation stats, and CPU instructions per second during WASM module evaluation.
+
+### 🔬 Research Foundation & Standards
+> **Research Citation:**  
+> WebAssembly Community Group & Bytecode Alliance (2024). *WASM Component Model Specification & WASI 0.3 (System Interface for WebAssembly)*. [wasi.dev](https://wasi.dev)
+
+### 💻 Usage Example: P2P Task Distribution & Memory Metrics
+
+```typescript
+import { SwarmCompute } from 'swarmcompute';
+
+const swarm = new SwarmCompute('wss://swarm.example.com', {
+  preferP2P: true, // Uses WebRTC DataChannels as primary transport
+  enableMetrics: true
+});
+
+await swarm.joinSwarm();
+
+// Submit task with WASM memory allocations & microsecond execution metrics
+const result = await swarm.submitTask(wasmArrayBuffer, { matrixA: [...], matrixB: [...] });
+console.log(`P2P Exec Time: ${result.metrics.executionTimeMs}ms, WASM Mem: ${result.metrics.memoryPages} pages`);
+```
+
+---
 
 ## API Reference
 
