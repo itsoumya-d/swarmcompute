@@ -38,7 +38,7 @@ export class WasmRunner {
         if (unit.input instanceof ArrayBuffer) {
           inputLen = unit.input.byteLength;
           const inputView = new Uint8Array(unit.input);
-          const memView = new Uint8Array(memory.buffer);
+          let memView = new Uint8Array(memory.buffer);
           memView.set(inputView, 0); // Write at offset 0
         }
 
@@ -47,6 +47,7 @@ export class WasmRunner {
            // @ts-ignore
            const outputLen = instance.exports.run(inputLen);
            if (typeof outputLen === 'number') {
+             // Re-read memory.buffer in case WASM called memory.grow()
              output = memory.buffer.slice(0, outputLen);
            }
         }
