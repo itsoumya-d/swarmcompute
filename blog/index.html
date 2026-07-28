@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Browser as a Supercomputer: Why Serverless Compute is Moving to the Peer-to-Peer Edge</title>
+    <meta name="description" content="A first-principles look at why cloud compute pricing (AWS Lambda, Cloudflare Workers) is inefficient compared to utilizing idle CPU/GPU cycles in web browsers.">
+    <meta name="keywords" content="free AWS Lambda alternative, WebGPU LLM in browser, zero server authentication, P2P volunteer supercomputing, SwarmCompute">
+    
+    <!-- OpenGraph -->
+    <meta property="og:title" content="The Browser as a Supercomputer: Why Serverless Compute is Moving to the Peer-to-Peer Edge">
+    <meta property="og:description" content="Questioning cloud compute assumptions from first principles.">
+    <meta property="og:type" content="article">
+    <meta property="og:url" content="https://itsoumya-d.github.io/swarmcompute/blog/index.html">
+    
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="The Browser as a Supercomputer">
+    <meta name="twitter:description" content="A first-principles look at why cloud compute pricing is inefficient.">
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    
+    <!-- JSON-LD -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "TechArticle",
+      "headline": "The Browser as a Supercomputer: Why Serverless Compute is Moving to the Peer-to-Peer Edge",
+      "description": "A first-principles look at why cloud compute pricing is inefficient compared to utilizing idle CPU/GPU cycles in web browsers.",
+      "author": {
+        "@type": "Person",
+        "name": "Soumya Debnath"
+      },
+      "publisher": {
+        "@type": "Organization",
+        "name": "SwarmCompute"
+      },
+      "datePublished": "2026-07-28",
+      "mainEntityOfPage": {
+        "@type": "WebPage",
+        "@id": "https://itsoumya-d.github.io/swarmcompute/blog/index.html"
+      }
+    }
+    </script>
+
+    <style>
+        :root {
+            --bg: #0A0A0A;
+            --surface: rgba(255, 255, 255, 0.03);
+            --border: rgba(255, 255, 255, 0.08);
+            --text: #EDEDED;
+            --text-muted: #A1A1AA;
+            --accent: #FACC15;
+            --font-body: 'Outfit', sans-serif;
+            --font-mono: 'JetBrains Mono', monospace;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text);
+            font-family: var(--font-body);
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        nav {
+            background: rgba(10, 10, 10, 0.7);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border);
+            padding: 1rem 2rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        
+        nav a {
+            color: var(--text);
+            text-decoration: none;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        nav a:hover {
+            color: var(--accent);
+        }
+
+        .container {
+            max-width: 720px;
+            margin: 4rem auto;
+            padding: 0 2rem;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            line-height: 1.2;
+            margin-bottom: 1.5rem;
+            letter-spacing: -0.03em;
+        }
+
+        h2 {
+            font-size: 1.5rem;
+            margin-top: 3rem;
+            margin-bottom: 1rem;
+            color: var(--text);
+        }
+
+        h3 {
+            font-size: 1.2rem;
+            margin-top: 2rem;
+            color: var(--text);
+        }
+
+        p {
+            color: var(--text-muted);
+            margin-bottom: 1.5rem;
+            font-size: 1.125rem;
+        }
+
+        .glass-panel {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 2rem;
+            margin: 2rem 0;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 2rem 0;
+            background: var(--surface);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        th, td {
+            padding: 1rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-muted);
+        }
+
+        th {
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text);
+            font-weight: 600;
+        }
+
+        pre {
+            background: #000;
+            padding: 1.5rem;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            overflow-x: auto;
+            font-family: var(--font-mono);
+            font-size: 0.875rem;
+            color: #A7F3D0;
+            margin: 2rem 0;
+        }
+
+        code {
+            font-family: var(--font-mono);
+        }
+    </style>
+</head>
+<body>
+    <nav>
+        <a href="../index.html">← Back to SwarmCompute</a>
+    </nav>
+    <main class="container">
+        <article>
+            <h1>The Browser as a Supercomputer: Why Serverless Compute is Moving to the Peer-to-Peer Edge</h1>
+            <p><strong>By Soumya Debnath</strong> • July 2026</p>
+
+            <p>If you look at the economics of modern cloud compute from first principles, it makes very little sense. We pay Amazon and Cloudflare significant premiums to rent CPU cycles in centralized data centers, while billions of high-performance consumer devices—laptops, smartphones, and tablets—sit idle for 90% of their lifespan.</p>
+            
+            <p>Serverless architecture was a step forward, abstracting away the server management. But the pricing model remains fundamentally flawed. Why are we paying $0.20 per million requests to AWS Lambda when the collective computational power of our users' browsers dwarfs the capacity of any single data center?</p>
+
+            <h2>The Inefficiency of the Cloud Monopoly</h2>
+            <p>Consider the traditional cloud model. You are paying for:</p>
+            <ul>
+                <li style="color: var(--text-muted);">Real estate for data centers.</li>
+                <li style="color: var(--text-muted);">Industrial cooling systems.</li>
+                <li style="color: var(--text-muted);">Enterprise network transit.</li>
+                <li style="color: var(--text-muted);">The provider's 60%+ profit margin.</li>
+            </ul>
+
+            <p>Meanwhile, the modern web browser is a remarkably sophisticated virtual machine. With the advent of WebAssembly (WASM), browsers can execute compiled C, C++, and Rust code at near-native speeds. The linear memory array buffer management—using instructions like <code>memory.grow()</code>—allows for efficient memory scaling without the overhead of traditional garbage collection.</p>
+
+            <h2>The Peer-to-Peer Alternative</h2>
+            <p>SwarmCompute flips the model. Instead of routing tasks to a centralized server, it leverages WebRTC to distribute tasks across a peer-to-peer mesh of volunteer browsers. When a user visits your site, their idle CPU threads become ephemeral worker nodes in your cluster.</p>
+
+            <div class="glass-panel">
+                <h3>Cost Comparison: Traditional Serverless vs SwarmCompute</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Provider</th>
+                            <th>Cost per 1M Requests</th>
+                            <th>Compute Time Cost</th>
+                            <th>Infrastructure</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>AWS Lambda</td>
+                            <td>$0.20</td>
+                            <td>$0.0000166667 / GB-s</td>
+                            <td>Centralized AWS DCs</td>
+                        </tr>
+                        <tr>
+                            <td>Cloudflare Workers</td>
+                            <td>$0.15</td>
+                            <td>$12.50 / 1M ms</td>
+                            <td>Edge PoPs</td>
+                        </tr>
+                        <tr>
+                            <td style="color: var(--accent);">SwarmCompute</td>
+                            <td style="color: var(--accent);">$0</td>
+                            <td style="color: var(--accent);">$0</td>
+                            <td style="color: var(--accent);">P2P Browser Mesh</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <h2>How AI Agents Can Build With SwarmCompute</h2>
+            <p>For developers and AI coding agents looking to integrate SwarmCompute into their applications, the process is straightforward. Here is a drop-in TypeScript recipe to execute a WASM payload across the swarm.</p>
+
+            <pre><code>import { SwarmNode } from '@swarmcompute/sdk';
+
+// Initialize the Swarm Node
+const node = new SwarmNode({
+    apiKey: 'public_evaluation_key',
+    meshNetwork: 'global'
+});
+
+async function computeWorkload() {
+    await node.connect();
+    
+    // Distribute a WASM task to 50 peers
+    const job = await node.submitTask({
+        wasmModule: 'https://my-app.com/workload.wasm',
+        parallelism: 50,
+        memoryLimitMB: 128
+    });
+
+    console.log(`Job submitted: ${job.id}`);
+    
+    // Wait for the decentralized cluster to aggregate results
+    const results = await job.waitForCompletion();
+    return results;
+}</code></pre>
+
+            <p>The future of compute isn't in massive, centralized server farms. It's in the latent power of the devices we already own. The browser is the new supercomputer.</p>
+        </article>
+    </main>
+</body>
+</html>

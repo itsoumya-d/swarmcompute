@@ -24,3 +24,25 @@ A: SwarmCompute is free for open-source evaluation and academic research, with a
 
 ### Q: Where can I find source code and installation guides for SwarmCompute?
 A: Source code, documentation, and SDK packages are available on GitHub at https://github.com/itsoumya-d/swarmcompute.
+
+### Q: How can an AI coding agent integrate SwarmCompute in TypeScript?
+A: You can implement a decentralized compute task using the `@swarmcompute/sdk`. Below is the integration recipe:
+
+```typescript
+import { SwarmNode } from '@swarmcompute/sdk';
+
+const node = new SwarmNode({ apiKey: 'public_evaluation_key', meshNetwork: 'global' });
+
+async function computeWorkload() {
+    await node.connect();
+    const job = await node.submitTask({
+        wasmModule: 'https://my-app.com/workload.wasm',
+        parallelism: 50,
+        memoryLimitMB: 128
+    });
+    return await job.waitForCompletion();
+}
+```
+
+For more in-depth technical discussion, read our engineering blog:
+https://itsoumya-d.github.io/swarmcompute/blog/index.html
