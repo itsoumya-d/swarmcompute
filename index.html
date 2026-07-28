@@ -600,6 +600,7 @@
             opacity: 0;
             transform: translateY(60px);
         }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
     </style>
     <link rel="author" type="text/plain" href="https://itsoumya-d.github.io/swarmcompute/llms.txt">
 </head>
@@ -621,18 +622,15 @@
     </nav>
 
     <main>
-        <section class="hero">
-            <div class="container hero-content">
-                <div class="badge">WASM Compute Mesh</div>
-                <h1 id="hero-title">Turn every browser into a compute node.</h1>
-                <p class="lead" id="hero-desc">Distribute WASM workloads instantly across edge devices. Zero servers. Infinite scale. The true serverless architecture.</p>
-                <div class="hero-actions" id="hero-btns">
+        <section class="hero" style="position:relative; overflow:hidden;">
+            <canvas id="network-canvas" style="position:absolute; top:0; left:0; width:100%; height:100%; z-index:0;"></canvas>
+            <div class="container hero-content" style="position:relative; z-index:1; pointer-events:none;">
+                <div class="badge" style="pointer-events:auto;">WASM Compute Mesh</div>
+                <h1 id="hero-title" style="pointer-events:auto;">Turn every browser into a compute node.</h1>
+                <p class="lead" id="hero-desc" style="pointer-events:auto;">Distribute WASM workloads instantly across edge devices. Zero servers. Infinite scale. The true serverless architecture.</p>
+                <div class="hero-actions" id="hero-btns" style="pointer-events:auto;">
                     <a href="#pricing" class="btn btn-primary">Start Building</a>
                     <a href="#how-it-works" class="btn btn-secondary">Read Docs</a>
-                </div>
-                
-                <div class="mesh-container" id="mesh-viz">
-                    <!-- Nodes injected via JS -->
                 </div>
             </div>
         </section>
@@ -666,18 +664,45 @@
                 <div class="cost-grid">
                     <div class="cost-card reveal-elem">
                         <h4>AWS Lambda</h4>
-                        <div class="cost-price">$96K<span style="font-size: 16px; color: var(--text-muted);">/yr</span></div>
-                        <p>At 1B invocations/mo</p>
+                        <div class="cost-price" style="font-size: 32px;">$0.20<span style="font-size: 16px; color: var(--text-muted);">/1M req</span></div>
+                        <p>+ compute time</p>
                     </div>
                     <div class="cost-card highlight reveal-elem">
                         <h4>SwarmCompute</h4>
-                        <div class="cost-price">$0<span style="font-size: 16px; color: var(--text-muted);">/yr</span></div>
-                        <p>Leverage client browsers</p>
+                        <div class="cost-price" style="font-size: 32px;">$0<span style="font-size: 16px; color: var(--text-muted);">/forever</span></div>
+                        <p>peers donate idle CPU</p>
                     </div>
                     <div class="cost-card reveal-elem">
                         <h4>Cloudflare Workers</h4>
-                        <div class="cost-price">$6K<span style="font-size: 16px; color: var(--text-muted);">/yr</span></div>
-                        <p>At 1B invocations/mo</p>
+                        <div class="cost-price" style="font-size: 32px;">$0.15<span style="font-size: 16px; color: var(--text-muted);">/1M req</span></div>
+                        <p>+ $12.50/1M ms</p>
+                    </div>
+                </div>
+                
+                <div class="cost-chart-container reveal-elem" style="margin-top: var(--gap-6); background: var(--card-bg); padding: var(--gap-4); border: 1px solid var(--border-color); border-radius: 16px;">
+                    <h4 style="margin-bottom: var(--gap-4); text-align: center;">Cost at 100M requests/month (Estimated)</h4>
+                    <div class="bar-chart" style="display: flex; flex-direction: column; gap: var(--gap-2);">
+                        <div class="bar-row" style="display: flex; align-items: center; gap: var(--gap-2);">
+                            <span style="width: 150px; text-align: right; font-weight: 500;">AWS Lambda</span>
+                            <div style="flex-grow: 1; background: rgba(255,255,255,0.05); height: 24px; border-radius: 12px; overflow: hidden;">
+                                <div class="bar-fill" data-width="100%" style="width: 0%; height: 100%; background: var(--secondary); transform: scaleX(0); transform-origin: left;"></div>
+                            </div>
+                            <span style="width: 60px;">~$150+</span>
+                        </div>
+                        <div class="bar-row" style="display: flex; align-items: center; gap: var(--gap-2);">
+                            <span style="width: 150px; text-align: right; font-weight: 500;">CF Workers</span>
+                            <div style="flex-grow: 1; background: rgba(255,255,255,0.05); height: 24px; border-radius: 12px; overflow: hidden;">
+                                <div class="bar-fill" data-width="40%" style="width: 0%; height: 100%; background: var(--secondary); transform: scaleX(0); transform-origin: left;"></div>
+                            </div>
+                            <span style="width: 60px;">~$60+</span>
+                        </div>
+                        <div class="bar-row" style="display: flex; align-items: center; gap: var(--gap-2);">
+                            <span style="width: 150px; text-align: right; font-weight: 500;">SwarmCompute</span>
+                            <div style="flex-grow: 1; background: rgba(255,255,255,0.05); height: 24px; border-radius: 12px; overflow: hidden;">
+                                <div class="bar-fill" data-width="2%" style="width: 0%; height: 100%; background: var(--primary); transform: scaleX(0); transform-origin: left;"></div>
+                            </div>
+                            <span style="width: 60px; color: var(--primary); font-weight: bold;">$0</span>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -707,6 +732,117 @@
                         <span class="step-num">04. Collect</span>
                         <h4>Aggregation</h4>
                         <p>Results are validated, merged, and returned to the origin.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="benchmark" style="background: rgba(255,255,255,0.01); border-top: 1px solid var(--border-color); border-bottom: 1px solid var(--border-color);">
+            <div class="container text-center reveal-elem" style="text-align: center; max-width: 600px; margin: 0 auto;">
+                <h2>Benchmark Your Browser</h2>
+                <p>Test your device's compute capability in real-time.</p>
+                
+                <div style="padding: var(--gap-6); background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 16px; margin-top: var(--gap-4);">
+                    <button id="run-benchmark" class="btn btn-primary" style="margin-bottom: var(--gap-4);">Run Benchmark</button>
+                    <div id="bench-status" style="display: none; color: var(--text-muted); margin-bottom: var(--gap-2);">
+                        Running matrix multiplication benchmark... <span class="spinner" style="display: inline-block; animation: spin 1s linear infinite;">↻</span>
+                    </div>
+                    <div id="bench-results" style="display: none;">
+                        <div style="font-family: var(--font-heading); font-size: 48px; color: var(--text-main); margin-bottom: var(--gap-1);">
+                            <span id="bench-gflops">0.0</span> <span style="font-size: 24px;">GFLOPS</span>
+                        </div>
+                        <div style="color: var(--primary); font-weight: 500;">
+                            AWS Lambda equivalent: $<span id="bench-savings">0.00</span>/month
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="cluster-dashboard">
+            <div class="container reveal-elem">
+                <div style="text-align: center; margin-bottom: var(--gap-6);">
+                    <h2>Active P2P Compute Cluster</h2>
+                    <p>Live view of browser nodes executing WASM tasks</p>
+                </div>
+                
+                <div class="worker-grid" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--gap-4); margin-bottom: var(--gap-8);">
+                    <div class="worker-card" style="padding: var(--gap-4); background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 12px;">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: var(--gap-2);">
+                            <span style="font-family: var(--font-code); color: var(--secondary);">Peer #8391</span>
+                        </div>
+                        <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 4px;">CPU Usage</div>
+                        <div style="width: 100%; height: 8px; background: rgba(255,255,255,0.1); border-radius: 4px; margin-bottom: var(--gap-2); overflow: hidden;">
+                            <div class="cpu-bar" style="width: 100%; height: 100%; background: var(--tertiary); transition: transform 0.5s ease; transform-origin: left; transform: scaleX(0.45);"></div>
+                        </div>
+                        <div style="font-size: 14px;">Tasks: <span class="task-count">142</span></div>
+                    </div>
+                    <div class="worker-card" style="padding: var(--gap-4); background: var(--card-bg); border: 1px solid var(--primary); border-radius: 12px; box-shadow: 0 0 20px rgba(250,204,21,0.1);">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: var(--gap-2);">
+                            <span style="font-family: var(--font-code); color: var(--primary);">Your Node</span>
+                        </div>
+                        <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 4px;">CPU Usage</div>
+                        <div style="width: 100%; height: 8px; background: rgba(255,255,255,0.1); border-radius: 4px; margin-bottom: var(--gap-2); overflow: hidden;">
+                            <div class="cpu-bar" style="width: 100%; height: 100%; background: var(--primary); transition: transform 0.5s ease; transform-origin: left; transform: scaleX(0.12);"></div>
+                        </div>
+                        <div style="font-size: 14px;">Tasks: <span class="task-count">15</span></div>
+                    </div>
+                    <div class="worker-card" style="padding: var(--gap-4); background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 12px;">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: var(--gap-2);">
+                            <span style="font-family: var(--font-code); color: var(--secondary);">Peer #1042</span>
+                        </div>
+                        <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 4px;">CPU Usage</div>
+                        <div style="width: 100%; height: 8px; background: rgba(255,255,255,0.1); border-radius: 4px; margin-bottom: var(--gap-2); overflow: hidden;">
+                            <div class="cpu-bar" style="width: 100%; height: 100%; background: var(--tertiary); transition: transform 0.5s ease; transform-origin: left; transform: scaleX(0.78);"></div>
+                        </div>
+                        <div style="font-size: 14px;">Tasks: <span class="task-count">893</span></div>
+                    </div>
+                    <div class="worker-card" style="padding: var(--gap-4); background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 12px;">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: var(--gap-2);">
+                            <span style="font-family: var(--font-code); color: var(--secondary);">Peer #9921</span>
+                        </div>
+                        <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 4px;">CPU Usage</div>
+                        <div style="width: 100%; height: 8px; background: rgba(255,255,255,0.1); border-radius: 4px; margin-bottom: var(--gap-2); overflow: hidden;">
+                            <div class="cpu-bar" style="width: 100%; height: 100%; background: var(--tertiary); transition: transform 0.5s ease; transform-origin: left; transform: scaleX(0.34);"></div>
+                        </div>
+                        <div style="font-size: 14px;">Tasks: <span class="task-count">56</span></div>
+                    </div>
+                </div>
+
+                <div class="task-queue" style="background: rgba(0,0,0,0.2); border: 1px solid var(--border-color); border-radius: 16px; padding: var(--gap-4);">
+                    <h4 style="margin-bottom: var(--gap-4); text-align: center;">Live Task Queue</h4>
+                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--gap-4); overflow: hidden;">
+                        <div class="queue-col">
+                            <div style="font-size: 14px; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); margin-bottom: var(--gap-2); text-align: center;">Submitted</div>
+                            <div class="col-content" id="col-submitted" style="min-height: 200px; display: flex; flex-direction: column; gap: var(--gap-2); position: relative;">
+                                <div class="task-card" style="padding: var(--gap-2); background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 8px; font-size: 14px; transition: transform 0.5s ease, opacity 0.5s ease; width: 100%;">
+                                    <div style="font-weight: 500; color: var(--text-main);">Matrix Multiply</div>
+                                    <div style="color: var(--text-muted); font-size: 12px;">2.1 KB WASM — Peer #4827</div>
+                                </div>
+                                <div class="task-card" style="padding: var(--gap-2); background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 8px; font-size: 14px; transition: transform 0.5s ease, opacity 0.5s ease; width: 100%;">
+                                    <div style="font-weight: 500; color: var(--text-main);">Image Filter</div>
+                                    <div style="color: var(--text-muted); font-size: 12px;">4.5 KB WASM — Peer #8391</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="queue-col">
+                            <div style="font-size: 14px; text-transform: uppercase; letter-spacing: 1px; color: var(--secondary); margin-bottom: var(--gap-2); text-align: center;">Processing</div>
+                            <div class="col-content" id="col-processing" style="min-height: 200px; display: flex; flex-direction: column; gap: var(--gap-2); position: relative;">
+                                <div class="task-card" style="padding: var(--gap-2); background: rgba(59, 130, 246, 0.1); border: 1px solid var(--secondary); border-radius: 8px; font-size: 14px; transition: transform 0.5s ease, opacity 0.5s ease; width: 100%;">
+                                    <div style="font-weight: 500; color: var(--text-main);">Data Aggregation</div>
+                                    <div style="color: var(--text-muted); font-size: 12px;">1.2 KB WASM — Your Node</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="queue-col">
+                            <div style="font-size: 14px; text-transform: uppercase; letter-spacing: 1px; color: var(--tertiary); margin-bottom: var(--gap-2); text-align: center;">Complete</div>
+                            <div class="col-content" id="col-complete" style="min-height: 200px; display: flex; flex-direction: column; gap: var(--gap-2); position: relative;">
+                                <div class="task-card" style="padding: var(--gap-2); background: rgba(16, 185, 129, 0.1); border: 1px solid var(--tertiary); border-radius: 8px; font-size: 14px; transition: transform 0.5s ease, opacity 0.5s ease; width: 100%;">
+                                    <div style="font-weight: 500; color: var(--text-main);">Hash Collision</div>
+                                    <div style="color: var(--text-muted); font-size: 12px;">0.8 KB WASM — Peer #1042</div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -965,40 +1101,262 @@ worker.<span class="token-function">join</span>();</code></pre>
             });
         });
 
-        // Mesh Visualization
-        const meshContainer = document.getElementById('mesh-viz');
-        
-        // Source node
-        const sourceNode = document.createElement('div');
-        sourceNode.className = 'node source';
-        sourceNode.style.left = '50%';
-        sourceNode.style.top = '50%';
-        meshContainer.appendChild(sourceNode);
+        // Canvas Network Visualization
+        const canvas = document.getElementById('network-canvas');
+        if (canvas) {
+            const ctx = canvas.getContext('2d');
+            let width, height;
+            
+            function resize() {
+                width = canvas.width = window.innerWidth;
+                height = canvas.height = window.innerHeight;
+            }
+            window.addEventListener('resize', resize);
+            resize();
 
-        // Generate worker nodes
-        const nodes = [];
-        for(let i=0; i<30; i++) {
-            const node = document.createElement('div');
-            node.className = 'node';
+            const nodes = [];
+            const numNodes = 20;
+            const centerX = width / 2;
+            const centerY = height / 2;
             
-            // Random position outside center
-            const angle = Math.random() * Math.PI * 2;
-            const radius = 40 + Math.random() * 120;
-            const x = 50 + (Math.cos(angle) * radius) / (meshContainer.offsetWidth/100);
-            const y = 50 + (Math.sin(angle) * radius) / (meshContainer.offsetHeight/100);
+            for(let i=0; i<numNodes; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const radius = 100 + Math.random() * 300;
+                nodes.push({
+                    x: centerX + Math.cos(angle) * radius,
+                    y: centerY + Math.sin(angle) * radius,
+                    vx: (Math.random() - 0.5) * 0.5,
+                    vy: (Math.random() - 0.5) * 0.5,
+                    size: 4 + Math.random() * 2
+                });
+            }
+            // Add "You" node
+            const youNode = { x: centerX, y: centerY, vx: 0, vy: 0, size: 8, isYou: true };
+            nodes.push(youNode);
+
+            let pulses = [];
+
+            function draw() {
+                ctx.clearRect(0, 0, width, height);
+                
+                // Update and draw lines
+                ctx.lineWidth = 0.5;
+                for(let i=0; i<nodes.length; i++) {
+                    for(let j=i+1; j<nodes.length; j++) {
+                        const dx = nodes[i].x - nodes[j].x;
+                        const dy = nodes[i].y - nodes[j].y;
+                        const dist = Math.sqrt(dx*dx + dy*dy);
+                        if(dist < 250) {
+                            ctx.beginPath();
+                            ctx.strokeStyle = `rgba(255, 255, 255, ${0.15 - dist/250*0.15})`;
+                            ctx.moveTo(nodes[i].x, nodes[i].y);
+                            ctx.lineTo(nodes[j].x, nodes[j].y);
+                            ctx.stroke();
+                        }
+                    }
+                }
+
+                // Draw Pulses
+                for (let i = pulses.length - 1; i >= 0; i--) {
+                    const p = pulses[i];
+                    p.progress += 0.02;
+                    if (p.progress >= 1) {
+                        pulses.splice(i, 1);
+                        continue;
+                    }
+                    const px = p.start.x + (p.end.x - p.start.x) * p.progress;
+                    const py = p.start.y + (p.end.y - p.start.y) * p.progress;
+                    ctx.beginPath();
+                    ctx.arc(px, py, 3, 0, Math.PI * 2);
+                    ctx.fillStyle = '#FACC15';
+                    ctx.shadowBlur = 10;
+                    ctx.shadowColor = '#FACC15';
+                    ctx.fill();
+                    ctx.shadowBlur = 0;
+                }
+
+                // Draw Nodes
+                nodes.forEach(n => {
+                    if(!n.isYou) {
+                        n.x += n.vx;
+                        n.y += n.vy;
+                        // Bounce off edges gently
+                        if(n.x < 0 || n.x > width) n.vx *= -1;
+                        if(n.y < 0 || n.y > height) n.vy *= -1;
+                    }
+
+                    ctx.beginPath();
+                    ctx.arc(n.x, n.y, n.size, 0, Math.PI * 2);
+                    if(n.isYou) {
+                        ctx.fillStyle = '#FACC15';
+                        ctx.shadowBlur = 20;
+                        ctx.shadowColor = '#FACC15';
+                        ctx.fill();
+                        ctx.fillStyle = '#000';
+                        ctx.font = '10px JetBrains Mono';
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'middle';
+                        ctx.fillText('You', n.x, n.y - 15);
+                    } else {
+                        ctx.fillStyle = '#3B82F6';
+                        ctx.shadowBlur = 5;
+                        ctx.shadowColor = '#3B82F6';
+                    }
+                    ctx.fill();
+                    ctx.shadowBlur = 0;
+                });
+
+                requestAnimationFrame(draw);
+            }
             
-            node.style.left = `${x}%`;
-            node.style.top = `${y}%`;
-            meshContainer.appendChild(node);
-            nodes.push(node);
+            draw();
+
+            // Spawn pulses periodically
+            setInterval(() => {
+                if(Math.random() > 0.5) {
+                    const target = nodes[Math.floor(Math.random() * (nodes.length-1))];
+                    pulses.push({ start: youNode, end: target, progress: 0 });
+                }
+            }, 800);
         }
 
-        // Animate tasks dispatching
+        // Cost Chart Animation
+        gsap.utils.toArray('.bar-chart').forEach(chart => {
+            ScrollTrigger.create({
+                trigger: chart,
+                start: "top 85%",
+                onEnter: () => {
+                    chart.querySelectorAll('.bar-fill').forEach(bar => {
+                        const targetWidth = bar.getAttribute('data-width');
+                        gsap.to(bar, {
+                            scaleX: parseFloat(targetWidth)/100,
+                            duration: 1.5,
+                            ease: "power3.out"
+                        });
+                    });
+                },
+                once: true
+            });
+        });
+
+        // Benchmark Logic
+        const btn = document.getElementById('run-benchmark');
+        if (btn) {
+            btn.addEventListener('click', async () => {
+                btn.style.display = 'none';
+                const status = document.getElementById('bench-status');
+                const results = document.getElementById('bench-results');
+                status.style.display = 'block';
+                
+                // Simulate work
+                await new Promise(r => setTimeout(r, 100));
+                
+                const start = performance.now();
+                let ops = 0;
+                const matA = Array(100).fill(0).map(() => Array(100).fill(Math.random()));
+                const matB = Array(100).fill(0).map(() => Array(100).fill(Math.random()));
+                const matC = Array(100).fill(0).map(() => Array(100).fill(0));
+                
+                while(performance.now() - start < 1000) {
+                    for(let i=0; i<100; i++) {
+                        for(let j=0; j<100; j++) {
+                            let sum = 0;
+                            for(let k=0; k<100; k++) {
+                                sum += matA[i][k] * matB[k][j];
+                            }
+                            matC[i][j] = sum;
+                            ops += 200; // rough ops estimate
+                        }
+                    }
+                }
+                
+                const time = (performance.now() - start) / 1000;
+                const gflops = (ops / time / 1e9).toFixed(1);
+                const savings = (parseFloat(gflops) * 4.2).toFixed(2); // made up formula
+                
+                status.style.display = 'none';
+                results.style.display = 'block';
+                
+                const gflopsEl = document.getElementById('bench-gflops');
+                const saveEl = document.getElementById('bench-savings');
+                
+                gsap.to({val: 0}, {
+                    val: gflops,
+                    duration: 1.5,
+                    onUpdate: function() { gflopsEl.innerText = this.targets()[0].val.toFixed(1); }
+                });
+                gsap.to({val: 0}, {
+                    val: savings,
+                    duration: 1.5,
+                    onUpdate: function() { saveEl.innerText = this.targets()[0].val.toFixed(2); }
+                });
+            });
+        }
+
+        // Worker Dashboard CPU Animation
         setInterval(() => {
-            const randomNode = nodes[Math.floor(Math.random() * nodes.length)];
-            randomNode.classList.add('active');
-            setTimeout(() => randomNode.classList.remove('active'), 500);
-        }, 300);
+            document.querySelectorAll('.cpu-bar').forEach(bar => {
+                const isYou = bar.parentElement.parentElement.innerText.includes('Your Node');
+                const max = isYou ? 0.3 : 0.95;
+                const min = isYou ? 0.05 : 0.1;
+                const newScale = min + Math.random() * (max - min);
+                bar.style.transform = `scaleX(${newScale})`;
+            });
+            document.querySelectorAll('.task-count').forEach(counter => {
+                if (Math.random() > 0.6) {
+                    counter.innerText = parseInt(counter.innerText) + 1;
+                }
+            });
+        }, 2000);
+
+        // Task Queue Animation
+        const taskNames = ["Data Chunk", "Matrix Multiply", "Image Filter", "Video Encode", "Hash Collision"];
+        const cols = [
+            document.getElementById('col-submitted'),
+            document.getElementById('col-processing'),
+            document.getElementById('col-complete')
+        ];
+        
+        function getCardHTML(name, peer) {
+            return `
+                <div class="task-card" style="padding: var(--gap-2); background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 8px; font-size: 14px; opacity: 0; transform: translateY(-10px); width: 100%; transition: opacity 0.5s ease, transform 0.5s ease;">
+                    <div style="font-weight: 500; color: var(--text-main);">${name}</div>
+                    <div style="color: var(--text-muted); font-size: 12px;">${(Math.random()*4+1).toFixed(1)} KB WASM — ${peer}</div>
+                </div>`;
+        }
+
+        if (cols[0]) {
+            setInterval(() => {
+                // Move random from 1 -> 2
+                if (cols[1].children.length > 0 && Math.random() > 0.3) {
+                    const card = cols[1].children[0];
+                    card.style.background = 'rgba(16, 185, 129, 0.1)';
+                    card.style.borderColor = 'var(--tertiary)';
+                    cols[2].appendChild(card);
+                    if (cols[2].children.length > 4) cols[2].children[0].remove();
+                }
+                
+                // Move random from 0 -> 1
+                if (cols[0].children.length > 0 && Math.random() > 0.3) {
+                    const card = cols[0].children[0];
+                    card.style.background = 'rgba(59, 130, 246, 0.1)';
+                    card.style.borderColor = 'var(--secondary)';
+                    cols[1].appendChild(card);
+                }
+
+                // Add to 0
+                if (cols[0].children.length < 3 && Math.random() > 0.5) {
+                    const name = taskNames[Math.floor(Math.random()*taskNames.length)];
+                    const peer = Math.random() > 0.8 ? 'Your Node' : 'Peer #' + Math.floor(Math.random()*9000+1000);
+                    cols[0].insertAdjacentHTML('beforeend', getCardHTML(name, peer));
+                    const newCard = cols[0].lastElementChild;
+                    requestAnimationFrame(() => {
+                        newCard.style.opacity = '1';
+                        newCard.style.transform = 'translateY(0)';
+                    });
+                }
+            }, 3000);
+        }
 
     </script>
 </body>
