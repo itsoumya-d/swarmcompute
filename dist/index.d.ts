@@ -89,10 +89,10 @@ declare class PeerTransport {
     private handleIceCandidate;
     private setupDataChannel;
     private safeSend;
-    sendTask(peerId: string, wasmBinary: ArrayBuffer, inputData: ArrayBuffer): Promise<void>;
+    sendTask(peerId: string, wasmBinary: ArrayBuffer, inputData: ArrayBuffer, taskId?: string): Promise<void>;
     sendTaskResult(peerId: string, result: any): void;
-    onTaskResult(callback: (result: any) => void): void;
-    onTask(callback: (peerId: string, wasmBinary: ArrayBuffer, inputData: ArrayBuffer) => void): void;
+    onTaskResult(callback: (result: any, peerId: string) => void): void;
+    onTask(callback: (peerId: string, wasmBinary: ArrayBuffer, inputData: ArrayBuffer, taskId: string) => void): void;
     private disconnectPeer;
     getConnectedPeers(): string[];
 }

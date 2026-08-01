@@ -232,31 +232,27 @@
             </div>
 
             <h2>How AI Agents Can Build With SwarmCompute</h2>
-            <p>For developers and AI coding agents looking to integrate SwarmCompute into their applications, the process is straightforward. Here is a drop-in TypeScript recipe to execute a WASM payload across the swarm.</p>
+            <p>For developers and AI coding agents looking to integrate SwarmCompute, here is the real API. There is no <code>@swarmcompute/sdk</code> package and no <code>SwarmNode</code> class &mdash; the package is <code>swarmcompute</code> and the exported class is <code>SwarmCompute</code>. It is not published to npm; import it from source or over the jsDelivr GitHub CDN path.</p>
 
-            <pre><code>import { SwarmNode } from '@swarmcompute/sdk';
+            <pre><code>import { SwarmCompute } from 'https://cdn.jsdelivr.net/gh/itsoumya-d/swarmcompute@main/dist/index.mjs';
 
-// Initialize the Swarm Node
-const node = new SwarmNode({
-    apiKey: 'public_evaluation_key',
-    meshNetwork: 'global'
-});
+// Connect to your own Go coordinator. There is no hosted "global mesh".
+const swarm = new SwarmCompute('wss://your-coordinator.example.com');
+await swarm.joinSwarm();
 
 async function computeWorkload() {
-    await node.connect();
-    
-    // Distribute a WASM task to 50 peers
-    const job = await node.submitTask({
-        wasmModule: 'https://my-app.com/workload.wasm',
-        parallelism: 50,
-        memoryLimitMB: 128
-    });
+    // submitTask takes the module bytes as an ArrayBuffer plus an input value.
+    // The module must export run(inputLen) and import (import "env" "memory").
+    const wasmBuffer = await fetch('/workload.wasm').then((r) =&gt; r.arrayBuffer());
 
-    console.log(`Job submitted: ${job.id}`);
-    
-    // Wait for the decentralized cluster to aggregate results
-    const results = await job.waitForCompletion();
-    return results;
+    // A task is broadcast whole to every connected worker. It is not split into
+    // shards, so there is no `parallelism` option and no aggregation step.
+    const result = await swarm.submitTask(wasmBuffer, { n: 40 });
+
+    // { taskId, result, executionTimeMs }. Rejects if no worker answers within
+    // 30s. The value is one unverified peer's answer -- there is no quorum and
+    // no cross-checking, so verify anything you depend on.
+    return result;
 }</code></pre>
 
             <p>The future of compute isn't in massive, centralized server farms. It's in the latent power of the devices we already own. The browser is the new supercomputer.</p>

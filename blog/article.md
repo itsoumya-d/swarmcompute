@@ -30,32 +30,28 @@ SwarmCompute flips the model. Instead of routing tasks to a centralized server, 
 
 ## How AI Agents Can Build With SwarmCompute
 
-For developers and AI coding agents looking to integrate SwarmCompute into their applications, the process is straightforward. Here is a drop-in TypeScript recipe to execute a WASM payload across the swarm.
+For developers and AI coding agents looking to integrate SwarmCompute, here is the real API. There is no `@swarmcompute/sdk` package and no `SwarmNode` class — the package is `swarmcompute` and the exported class is `SwarmCompute`. It is not published to npm; import it from source or over the jsDelivr GitHub CDN path.
 
 ```typescript
-import { SwarmNode } from '@swarmcompute/sdk';
+import { SwarmCompute } from 'https://cdn.jsdelivr.net/gh/itsoumya-d/swarmcompute@main/dist/index.mjs';
 
-// Initialize the Swarm Node
-const node = new SwarmNode({
-    apiKey: 'public_evaluation_key',
-    meshNetwork: 'global'
-});
+// Connect to your own Go coordinator. There is no hosted "global mesh".
+const swarm = new SwarmCompute('wss://your-coordinator.example.com');
+await swarm.joinSwarm();
 
 async function computeWorkload() {
-    await node.connect();
-    
-    // Distribute a WASM task to 50 peers
-    const job = await node.submitTask({
-        wasmModule: 'https://my-app.com/workload.wasm',
-        parallelism: 50,
-        memoryLimitMB: 128
-    });
+    // submitTask takes the module bytes as an ArrayBuffer plus an input value.
+    // The module must export run(inputLen) and import (import "env" "memory").
+    const wasmBuffer = await fetch('/workload.wasm').then((r) => r.arrayBuffer());
 
-    console.log(`Job submitted: ${job.id}`);
-    
-    // Wait for the decentralized cluster to aggregate results
-    const results = await job.waitForCompletion();
-    return results;
+    // A task is broadcast whole to every connected worker. It is not split into
+    // shards, so there is no `parallelism` option and no aggregation step.
+    const result = await swarm.submitTask(wasmBuffer, { n: 40 });
+
+    // { taskId, result, executionTimeMs }. Rejects if no worker answers within
+    // 30s. The value is one unverified peer's answer — there is no quorum and no
+    // cross-checking, so verify anything you depend on.
+    return result;
 }
 ```
 

@@ -1,13 +1,31 @@
 // Copyright (c) 2024-2026 Soumya Debnath. All Rights Reserved.
 // Licensed under the Business Source License 1.1 (BSL 1.1).
 // See LICENSE file for details. Production use requires a paid license.
-// Contact: soumyadebnath1661@gmail.com | +91 7031648617
+// Contact: soumyadebnath1661@gmail.com
+
+/**
+ * P2P task frame layout (binary, sent over the RTCDataChannel).
+ *
+ *   FRAME_TASK_V1 = 1   [type:u8][wasmLen:u32][inputLen:u32][wasm][input]
+ *   FRAME_TASK_V2 = 2   [type:u8][wasmLen:u32][inputLen:u32][idLen:u8][id][wasm][input]
+ *
+ * V1 carries no task identifier, so a peer executing a V1 frame cannot tell the
+ * submitter which task its reply belongs to. V2 adds the submitter's task id so
+ * replies can be correlated. V1 is still parsed for compatibility.
+ */
+const FRAME_TASK_V1 = 1;
+const FRAME_TASK_V2 = 2;
 
 export class PeerTransport {
-  private peers = new Map<string, { pc: RTCPeerConnection; dc: RTCDataChannel }>();
+  private peers = new Map<string, { pc: RTCPeerConnection; dc: RTCDataChannel | null }>();
   private signalingWs?: WebSocket;
-  private taskResultCallback?: (result: any) => void;
-  private taskCallback?: (peerId: string, wasmBinary: ArrayBuffer, inputData: ArrayBuffer) => void;
+  private taskResultCallback?: (result: any, peerId: string) => void;
+  private taskCallback?: (
+    peerId: string,
+    wasmBinary: ArrayBuffer,
+    inputData: ArrayBuffer,
+    taskId: string
+  ) => void;
 
   constructor() {}
 
@@ -50,7 +68,7 @@ export class PeerTransport {
         this.signalingWs.send(JSON.stringify({ type: 'ice-candidate', to: peerId, candidate: event.candidate }));
       }
     };
-    
+
     pc.oniceconnectionstatechange = () => {
       if (pc.iceConnectionState === 'disconnected' || pc.iceConnectionState === 'failed') {
         this.disconnectPeer(peerId);
@@ -61,7 +79,7 @@ export class PeerTransport {
 
     const offer = await pc.createOffer();
     await pc.setLocalDescription(offer);
-    
+
     if (this.signalingWs?.readyState === WebSocket.OPEN) {
       this.signalingWs.send(JSON.stringify({ type: 'offer', to: peerId, offer }));
     }
@@ -75,8 +93,11 @@ export class PeerTransport {
       ]
     });
 
-    // Register peer IMMEDIATELY so ICE candidates arriving before ondatachannel aren't dropped
-    this.peers.set(peerId, { pc, dc: null as any });
+    // Register peer IMMEDIATELY so ICE candidates arriving before ondatachannel aren't dropped.
+    // NOTE: dc is null until ondatachannel fires. Every read of peer.dc must tolerate null —
+    // if ICE fails before the channel arrives (the normal outcome behind symmetric NAT with no
+    // TURN relay) the cleanup path runs while dc is still null.
+    this.peers.set(peerId, { pc, dc: null });
 
     pc.ondatachannel = (event) => {
       const dc = event.channel;
@@ -90,7 +111,7 @@ export class PeerTransport {
         this.signalingWs.send(JSON.stringify({ type: 'ice-candidate', to: peerId, candidate: event.candidate }));
       }
     };
-    
+
     pc.oniceconnectionstatechange = () => {
       if (pc.iceConnectionState === 'disconnected' || pc.iceConnectionState === 'failed') {
         this.disconnectPeer(peerId);
@@ -100,7 +121,7 @@ export class PeerTransport {
     await pc.setRemoteDescription(new RTCSessionDescription(offer));
     const answer = await pc.createAnswer();
     await pc.setLocalDescription(answer);
-    
+
     if (this.signalingWs?.readyState === WebSocket.OPEN) {
       this.signalingWs.send(JSON.stringify({ type: 'answer', to: peerId, answer }));
     }
@@ -123,28 +144,44 @@ export class PeerTransport {
   private setupDataChannel(dc: RTCDataChannel, peerId: string): void {
     dc.onmessage = (event) => {
       if (event.data instanceof ArrayBuffer) {
-        if (event.data.byteLength < 9) return; // Header size check
-        const view = new DataView(event.data);
+        const data: ArrayBuffer = event.data;
+        if (data.byteLength < 9) return; // minimum header size
+        const view = new DataView(data);
         const type = view.getUint8(0);
-        
-        if (type === 1) { // Task
-          const wasmLength = view.getUint32(1);
-          const inputLength = view.getUint32(5);
-          if (event.data.byteLength < 9 + wasmLength + inputLength) {
+        if (type !== FRAME_TASK_V1 && type !== FRAME_TASK_V2) return;
+
+        const wasmLength = view.getUint32(1);
+        const inputLength = view.getUint32(5);
+
+        let bodyOffset = 9;
+        let taskId = 'p2p-task'; // V1 frames carry no id; preserve the historical value
+        if (type === FRAME_TASK_V2) {
+          if (data.byteLength < 10) return;
+          const idLength = view.getUint8(9);
+          bodyOffset = 10 + idLength;
+          if (data.byteLength < bodyOffset) {
             console.warn('SwarmCompute: Malformed P2P task payload length');
             return;
           }
-          const wasmBinary = event.data.slice(9, 9 + wasmLength);
-          const inputData = event.data.slice(9 + wasmLength, 9 + wasmLength + inputLength);
-          if (this.taskCallback) {
-            this.taskCallback(peerId, wasmBinary, inputData);
-          }
+          taskId = new TextDecoder().decode(new Uint8Array(data, 10, idLength));
+        }
+
+        if (data.byteLength < bodyOffset + wasmLength + inputLength) {
+          console.warn('SwarmCompute: Malformed P2P task payload length');
+          return;
+        }
+        const wasmBinary = data.slice(bodyOffset, bodyOffset + wasmLength);
+        const inputData = data.slice(bodyOffset + wasmLength, bodyOffset + wasmLength + inputLength);
+        if (this.taskCallback) {
+          this.taskCallback(peerId, wasmBinary, inputData, taskId);
         }
       } else if (typeof event.data === 'string') {
         try {
           const msg = JSON.parse(event.data);
           if (msg.type === 'task_result' && this.taskResultCallback) {
-            this.taskResultCallback(msg.result);
+            // Pass the sending peer so the caller can reject results from a
+            // peer the task was never dispatched to.
+            this.taskResultCallback(msg.result, peerId);
           }
         } catch (e) {
           console.error("Failed to parse string message on data channel", e);
@@ -167,54 +204,78 @@ export class PeerTransport {
     } catch {}
   }
 
-  async sendTask(peerId: string, wasmBinary: ArrayBuffer, inputData: ArrayBuffer): Promise<void> {
+  async sendTask(
+    peerId: string,
+    wasmBinary: ArrayBuffer,
+    inputData: ArrayBuffer,
+    taskId?: string
+  ): Promise<void> {
     const peer = this.peers.get(peerId);
-    if (!peer || peer.dc.readyState !== 'open') {
+    if (!peer || !peer.dc || peer.dc.readyState !== 'open') {
       throw new Error(`Peer ${peerId} not connected`);
     }
 
-    const headerSize = 1 + 4 + 4;
+    // Emit a V2 frame when a task id is supplied so the remote peer can label
+    // its reply; fall back to the V1 layout otherwise.
+    const idBytes = taskId ? new TextEncoder().encode(taskId) : new Uint8Array(0);
+    if (idBytes.byteLength > 255) {
+      throw new Error(`Task id must encode to 255 bytes or fewer (got ${idBytes.byteLength})`);
+    }
+    const useV2 = idBytes.byteLength > 0;
+    const headerSize = useV2 ? 10 + idBytes.byteLength : 9;
+
     const buffer = new ArrayBuffer(headerSize + wasmBinary.byteLength + inputData.byteLength);
     const view = new DataView(buffer);
     const u8 = new Uint8Array(buffer);
-    
-    view.setUint8(0, 1);
+
+    view.setUint8(0, useV2 ? FRAME_TASK_V2 : FRAME_TASK_V1);
     view.setUint32(1, wasmBinary.byteLength);
     view.setUint32(5, inputData.byteLength);
-    
+    if (useV2) {
+      view.setUint8(9, idBytes.byteLength);
+      u8.set(idBytes, 10);
+    }
+
     u8.set(new Uint8Array(wasmBinary), headerSize);
     u8.set(new Uint8Array(inputData), headerSize + wasmBinary.byteLength);
-    
+
     this.safeSend(peer.dc, buffer);
   }
-  
+
   sendTaskResult(peerId: string, result: any): void {
     const peer = this.peers.get(peerId);
-    if (peer && peer.dc.readyState === 'open') {
+    if (peer && peer.dc && peer.dc.readyState === 'open') {
       this.safeSend(peer.dc, JSON.stringify({ type: 'task_result', result }));
     }
   }
 
-  onTaskResult(callback: (result: any) => void): void {
+  onTaskResult(callback: (result: any, peerId: string) => void): void {
     this.taskResultCallback = callback;
   }
-  
-  onTask(callback: (peerId: string, wasmBinary: ArrayBuffer, inputData: ArrayBuffer) => void): void {
+
+  onTask(
+    callback: (peerId: string, wasmBinary: ArrayBuffer, inputData: ArrayBuffer, taskId: string) => void
+  ): void {
     this.taskCallback = callback;
   }
 
   private disconnectPeer(peerId: string): void {
     const peer = this.peers.get(peerId);
     if (peer) {
-      peer.dc.close();
-      peer.pc.close();
+      // dc is null when ICE fails before the data channel is established.
+      // Calling .close() on it threw a TypeError out of the
+      // oniceconnectionstatechange handler, leaving the peer in the map with a
+      // null dc — after which getConnectedPeers(), and therefore every
+      // submitTask() call, threw for the remaining lifetime of the page.
+      try { peer.dc?.close(); } catch {}
+      try { peer.pc.close(); } catch {}
       this.peers.delete(peerId);
     }
   }
-  
+
   getConnectedPeers(): string[] {
       return Array.from(this.peers.entries())
-          .filter(([_, peer]) => peer.dc.readyState === 'open')
+          .filter(([_, peer]) => peer.dc?.readyState === 'open')
           .map(([id, _]) => id);
   }
 }
