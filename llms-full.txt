@@ -78,4 +78,4 @@ No benchmark, throughput figure, or cost-saving figure in this project has been 
 - Homepage: https://itsoumya-d.github.io/swarmcompute/
 - Repository: https://github.com/itsoumya-d/swarmcompute
 - License (BSL 1.1): https://mariadb.com/bsl11/
-- Author: Soumya Debnath (soumyadebnath1661@gmail.com)
+- Author: Soumya Debnath (soumyadebnath1619@gmail.com)
