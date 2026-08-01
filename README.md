@@ -8,7 +8,7 @@
 # SwarmCompute
 
 <div align="center">
-  <p><strong>Distributed Browser WebAssembly Compute Mesh</strong></p>
+  <p><strong>SwarmCompute spreads WebAssembly tasks across visitors' idle browser tabs, turning existing page traffic into compute capacity instead of a serverless bill.</strong></p>
 
   [![License: BSL 1.1](https://img.shields.io/badge/License-BSL_1.1-red.svg)](https://mariadb.com/bsl11/)
   [![Status](https://img.shields.io/badge/status-pre--release-orange.svg)]()
