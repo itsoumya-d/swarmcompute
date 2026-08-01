@@ -1,6 +1,6 @@
 # SwarmCompute
 
-> Pre-release TypeScript SDK for distributed browser WebAssembly compute via WebSockets and WebRTC. Not on npm. STUN-only ICE — connections fail behind symmetric NAT without a TURN server.
+> SwarmCompute spreads WebAssembly tasks across visitors' idle browser tabs, turning existing page traffic into compute capacity instead of a serverless bill.
 
 SwarmCompute distributes WASM tasks across connected browser tabs. Desktop browsers act as worker nodes; mobile browsers submit tasks only. Task routing uses WebRTC DataChannels (P2P) when peers are connected and falls back to a WebSocket coordinator relay. The package is pre-release, has no npm publication, and no production adopters as of 2026.
 
