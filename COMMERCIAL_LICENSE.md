@@ -44,7 +44,7 @@ A data processing platform running 50M Lambda invocations/month:
 **Soumya Debnath** — Creator & Sole Rights Holder
 
 - 📧 Email: [soumyadebnath1661@gmail.com](mailto:soumyadebnath1661@gmail.com)
-- 📞 Phone / WhatsApp: [+91 7031648617](tel:+917031648617)
+- 📞 Phone / WhatsApp: [](tel:)
 - 🐙 GitHub: [github.com/itsoumya-d](https://github.com/itsoumya-d)
 
 ---

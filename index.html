@@ -12,7 +12,8 @@
     <meta property="og:title" content="SwarmCompute - Distributed Browser WASM Compute">
     <meta property="og:description" content="Run WASM workloads across distributed browsers. The ultimate alternative to traditional serverless.">
     <meta property="og:type" content="website">
-    <meta property="og:url" content="https://swarmcompute.local">
+    <meta property="og:url" content="https://itsoumya-d.github.io/swarmcompute/">
+    <link rel="canonical" href="https://itsoumya-d.github.io/swarmcompute/">
     
     <!-- Twitter -->
     <meta name="twitter:card" content="summary_large_image">
@@ -919,9 +920,9 @@ worker.<span class="token-function">join</span>();</code></pre>
                         <p>Automatic retry and state-reconciliation if a client node disconnects mid-execution.</p>
                     </div>
                     <div class="feature-card reveal-elem">
-                        <div class="feature-icon">🎮</div>
-                        <h4>WebGPU Support</h4>
-                        <p>Access client GPU resources for parallel processing and AI inference workloads.</p>
+                        <div class="feature-icon">🧩</div>
+                        <h4>WebAssembly Execution</h4>
+                        <p>Work units run as WebAssembly with a host-supplied linear memory and no imports beyond it. GPU access is not implemented.</p>
                     </div>
                     <div class="feature-card reveal-elem">
                         <div class="feature-icon">🌊</div>
@@ -929,9 +930,9 @@ worker.<span class="token-function">join</span>();</code></pre>
                         <p>Stream large datasets directly to worker nodes without buffering on central servers.</p>
                     </div>
                     <div class="feature-card reveal-elem">
-                        <div class="feature-icon">💾</div>
-                        <h4>Edge Caching</h4>
-                        <p>WASM modules are cached aggressively via IndexedDB on client devices.</p>
+                        <div class="feature-icon">📦</div>
+                        <h4>Module Transfer</h4>
+                        <p>Modules are sent base64-encoded over the coordinator relay, or as binary frames over a WebRTC DataChannel. Client-side caching is not implemented.</p>
                     </div>
                 </div>
             </div>
@@ -979,8 +980,7 @@ worker.<span class="token-function">join</span>();</code></pre>
                         <div class="price-amount">$2,999<span style="font-size: 16px; color: var(--text-muted);">/mo</span></div>
                         <ul class="price-features">
                             <li>Dedicated Routers</li>
-                            <li>Up to 1M active nodes</li>
-                            <li>WebGPU support</li>
+                            <li>Priority issue triage</li>
                             <li>Priority support</li>
                         </ul>
                         <a href="#" class="btn btn-primary">Choose Scale</a>

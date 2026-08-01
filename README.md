@@ -2,7 +2,7 @@
 // Copyright (c) 2024-2026 Soumya Debnath. All Rights Reserved.
 // Licensed under the Business Source License 1.1 (BSL 1.1).
 // See LICENSE file for details. Production use requires a paid license.
-// Contact: soumyadebnath1661@gmail.com | +91 7031648617
+// Contact: soumyadebnath1661@gmail.com
 -->
 
 # SwarmCompute
@@ -103,7 +103,11 @@ Current number of known active workers (from coordinator messages).
 ### `WasmRunner`
 
 #### `static async run(unit: WorkUnit): Promise<WorkUnitResult>`
-Compiles and instantiates a WASM module in the current environment. Calls the exported `run()` function with input data written to linear memory. A 30-second timeout hard-caps execution. Returns `{ workUnitId, taskId, result, error?, executionTimeMs }` — it resolves rather than rejects; errors appear in the `error` field.
+Compiles and instantiates a WASM module **on the calling thread**. Calls the exported `run()` function with input data written to linear memory. Returns `{ workUnitId, taskId, result, error?, executionTimeMs }` — it resolves rather than rejects; errors appear in the `error` field.
+
+The module must import its linear memory as `(import "env" "memory" (memory 10))`. Modules that declare their own memory are rejected: the host cannot read their output (it would hand back silently-zeroed bytes) and the host page cap would not apply to their private allocation. Modules with no callable `run()` export, and `run()` return values outside the memory bounds, are also rejected with an error rather than reported as success.
+
+The 30-second timer bounds only `compile()` and `instantiate()`. **It does not bound guest CPU** — see [Guest isolation](#guest-isolation-what-is-and-is-not-enforced).
 
 ---
 
@@ -114,6 +118,25 @@ Compiles and instantiates a WASM module in the current environment. Calls the ex
 3. **WASM execution**: Worker nodes receive a base64-encoded WASM module, decode it, call `WebAssembly.compile()` + `WebAssembly.instantiate()`, and invoke the `run()` export.
 4. **Result routing**: Results are sent back through the same channel (P2P or coordinator) to the submitter.
 
+The coordinator does **not** partition work or assign it to a particular node. `submit_task` is relabelled `task_assigned` and broadcast to every connected client, so every non-mobile node runs the whole task. With N workers that is N× the CPU spend and no parallel speedup, and the submitter executes its own task too. The N independent answers that result are never compared with one another.
+
+---
+
+## Guest isolation — what is and is not enforced
+
+SwarmCompute runs WebAssembly supplied by other participants on a volunteer's machine. Be precise about what that does and does not protect.
+
+**Enforced:**
+- **No ambient authority.** A work unit is instantiated with exactly one import, `env.memory`. A module that imports anything else — a function to reach `fetch`, the DOM, storage — fails to instantiate and the work unit returns an error. WebAssembly grants no capability that is not imported, so a guest cannot reach the network, the DOM, cookies or storage on its own.
+- **Bounded linear memory,** because the host supplies the memory (10 pages initial / 50 maximum) and rejects modules that would allocate their own.
+- **Bounded output length,** validated against the memory size before the result is copied out.
+
+**Not enforced:**
+- **Guest CPU time is not bounded.** A WebAssembly call is synchronous. While `run()` is on the stack the JavaScript event loop cannot turn, so no `setTimeout` can fire and no code can intervene. A module containing an unbounded loop occupies the thread until the tab is closed. `WasmRunner` runs the guest on the **calling thread** — in a browser that freezes the page, including its UI. `WorkerPool` does not create a `Worker`; it only tracks a count reported by the coordinator. Bounding guest CPU requires running the guest in a dedicated `Worker` and calling `Worker.terminate()` when a deadline expires; that is not implemented.
+- **Result values are not verified.** There is no redundant execution with N-of-M agreement, no spot-checking against known answers, and no verifiable-computation scheme. A single peer's return value is accepted as the answer. The P2P path at least requires the reply to come from the peer the task was dispatched to; the coordinator path has no such check, because the coordinator broadcasts every result to every client and authenticates nobody.
+
+**Therefore:** only submit modules you compiled yourself and would be willing to run on your own users' devices, and treat every returned value as unverified input.
+
 ---
 
 ## Known Limitations
@@ -121,8 +144,11 @@ Compiles and instantiates a WASM module in the current environment. Calls the ex
 - **Pre-release, no npm package.** Use jsDelivr or clone from source.
 - **No TURN relay — connections fail behind symmetric or carrier-grade NAT.** The ICE configuration uses only public STUN servers (`stun.l.google.com`). STUN cannot traverse symmetric NAT (common on corporate networks) or many mobile carrier-grade NAT deployments; those peers cannot connect at all. There is currently no relay fallback. The failure is also **not clearly surfaced** — a failed ICE negotiation triggers `disconnectPeer()` via the `iceConnectionState === 'failed'` handler, which is reported the same way as a peer disconnecting, so callers cannot distinguish "unreachable network" from "peer left". If you need reliable connectivity across arbitrary networks, supply your own TURN server.
 - **P2P signaling is hardcoded to port 8081.** `joinSwarm()` always tries `ws://localhost:8081` for P2P signaling. In production this must be reconfigured.
-- **WASM modules must export a `run()` function.** Modules without this export silently return `null` output. There is no schema validation.
-- **Task broadcast is untrusted.** Any modified client can send a forged `task_result`. Critical workloads must verify results independently.
+- **WASM modules must export a `run()` function and import `env.memory`.** Modules that do not are rejected with an error. There is no schema validation of input or output payloads.
+- **A malicious module can hang the volunteer's thread indefinitely.** The 30-second timer cannot interrupt executing WebAssembly, and there is no `Worker` boundary. See [Guest isolation](#guest-isolation-what-is-and-is-not-enforced).
+- **Results are not verified.** Any client can send a forged `task_result` for any task id it has seen, and the coordinator broadcasts every task to every client, so every client sees every task id. There is no redundancy, quorum, or spot-checking. Critical workloads must verify results independently.
+- **No work partitioning and no task reassignment.** Each task is broadcast whole to every worker (N× redundant CPU, no speedup). If the answering peer disappears the submission rejects on timeout; it is not retried or reassigned.
+- **The coordinator accepts WebSocket upgrades from any origin and authenticates nobody.** `CheckOrigin` returns `true` unconditionally and there is no read size limit on incoming frames. Do not expose it on the public internet without an authenticating proxy.
 - **`isWorker` uses User-Agent detection.** Mobile UA strings cause a node to be classified as submitter-only. This heuristic is imprecise and does not reflect actual device capability.
 - **No production adopters yet.** APIs may change without notice.
 - **Performance benchmark (from original README) is unverifiable.** The claim of 220 tasks/second at 100 concurrent desktop browsers requires a live swarm to measure. It has been removed from the main README body. If you run your own benchmark, open a PR with methodology, hardware specs, and coordinator spec.
@@ -170,6 +196,6 @@ Place behind an Nginx/Caddy reverse proxy with TLS for `wss://` support in produ
 
 **Free use:** Personal evaluation, academic research, open-source contribution.
 
-Contact: soumyadebnath1661@gmail.com | +91 7031648617 | github.com/itsoumya-d
+Contact: soumyadebnath1661@gmail.com | github.com/itsoumya-d
 
 © 2024-2026 Soumya Debnath. All Rights Reserved.

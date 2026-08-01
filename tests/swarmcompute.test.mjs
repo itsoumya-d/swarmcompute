@@ -176,14 +176,117 @@ describe('PeerTransport ICE configuration audit', () => {
     assert.doesNotThrow(() => new dist.PeerTransport());
   });
 
-  // Note: In Node there is no RTCPeerConnection, so we verify the source-level
-  // audit finding here rather than live WebRTC behavior.
-  test('ICE audit: STUN-only (per source code audit)', () => {
-    // Statically verified: peer-transport.ts configures iceServers with
-    // stun:stun.l.google.com:19302 and stun1.l.google.com:19302 only.
-    // No TURN servers are configured. This test documents the known limitation.
-    // See Known Limitations section in README for full impact.
-    const note = 'STUN-only: symmetric NAT peers cannot connect — no TURN relay configured';
-    assert.ok(note.includes('STUN-only'), 'ICE limitation documented');
+  // Note: In Node there is no RTCPeerConnection, so assert against the ICE
+  // configuration the code really builds rather than live WebRTC behaviour.
+  test('ICE audit: STUN-only, zero TURN servers configured', () => {
+    const seen = [];
+    const priorRTC = globalThis.RTCPeerConnection;
+    globalThis.RTCPeerConnection = class {
+      constructor(config) {
+        seen.push(config);
+        this.iceConnectionState = 'new';
+      }
+      createDataChannel() { return { binaryType: '', readyState: 'connecting', close() {} }; }
+      async createOffer() { return { type: 'offer', sdp: '' }; }
+      async setLocalDescription() {}
+      close() {}
+    };
+    try {
+      new dist.PeerTransport().connectToPeer('peer-1');
+    } finally {
+      globalThis.RTCPeerConnection = priorRTC;
+    }
+    assert.strictEqual(seen.length, 1, 'connectToPeer must construct one RTCPeerConnection');
+    const urls = seen[0].iceServers.map((s) => String(s.urls));
+    assert.ok(urls.every((u) => u.startsWith('stun:')), 'only STUN URLs are configured');
+    assert.strictEqual(
+      urls.filter((u) => u.startsWith('turn:') || u.startsWith('turns:')).length,
+      0,
+      'no TURN relay is configured — symmetric-NAT peers cannot connect'
+    );
+    assert.strictEqual(seen[0].iceTransportPolicy, undefined);
+    assert.strictEqual(seen[0].iceCandidatePoolSize, undefined);
+  });
+});
+
+// ── 8. WasmRunner — guest isolation contract ─────────────────────────────────
+// Minimal modules compiled from WAT ahead of time so the suite stays dependency-free.
+const WASM = {
+  // (import "env" "memory") + run(len) -> len, increments byte 0
+  ECHO: 'AGFzbQEAAAABBgFgAX8BfwIPAQNlbnYGbWVtb3J5AgAKAwIBAAcHAQNydW4AAAoTAREAQQBBAC0AAEEBajoAACAACw==',
+  // declares its OWN memory instead of importing the host's
+  OWN_MEMORY: 'AGFzbQEAAAABBgFgAX8BfwMCAQAFAwEAAQcHAQNydW4AAAoGAQQAQQML',
+  // imports host memory but exports no run()
+  NO_RUN: 'AGFzbQEAAAABBQFgAAF/Ag8BA2VudgZtZW1vcnkCAAoDAgEABwkBBW90aGVyAAAKBgEEAEEFCw==',
+  // run() returns -1, an out-of-range output length
+  BAD_LEN: 'AGFzbQEAAAABBgFgAX8BfwIPAQNlbnYGbWVtb3J5AgAKAwIBAAcHAQNydW4AAAoGAQQAQX8L',
+};
+const wasmOf = (k) => Uint8Array.from(Buffer.from(WASM[k], 'base64')).buffer;
+const unit = (k, input = null) => ({ id: 'u', taskId: 't', wasmModule: wasmOf(k), input });
+
+describe('WasmRunner guest contract', () => {
+  test('a well-formed module computes a real result', async () => {
+    const input = new Uint8Array([7, 8, 9]);
+    const r = await dist.WasmRunner.run(unit('ECHO', input.buffer.slice(0)));
+    assert.strictEqual(r.error, undefined);
+    assert.deepStrictEqual([...new Uint8Array(r.result.output)], [8, 8, 9]);
+    assert.strictEqual(r.taskId, 't');
+  });
+
+  test('rejects a module that declares its own memory instead of importing the host memory', async () => {
+    // Such a module used to "succeed" with silently zeroed output, because the
+    // host read back its own unused buffer, and the host page cap did not apply
+    // to the module's private allocation.
+    const r = await dist.WasmRunner.run(unit('OWN_MEMORY'));
+    assert.match(r.error, /must import its linear memory/i);
+    assert.strictEqual(r.result, null);
+  });
+
+  test('rejects a module with no callable run() export instead of reporting success', async () => {
+    const r = await dist.WasmRunner.run(unit('NO_RUN'));
+    assert.match(r.error, /does not export a callable run/i);
+    assert.strictEqual(r.result, null);
+  });
+
+  test('rejects a guest-supplied output length outside the memory bounds', async () => {
+    const r = await dist.WasmRunner.run(unit('BAD_LEN'));
+    assert.match(r.error, /invalid output length/i);
+    assert.strictEqual(r.result, null);
+  });
+
+  test('rejects input larger than the linear memory granted to a work unit', async () => {
+    const r = await dist.WasmRunner.run(unit('ECHO', new ArrayBuffer(5 * 1024 * 1024)));
+    assert.match(r.error, /exceeds the .* bytes of linear memory/i);
+  });
+
+  test('propagates the submitter taskId onto the result so it can be correlated', async () => {
+    const r = await dist.WasmRunner.run({
+      id: 'work-unit-1', taskId: 'submitter-task-1', wasmModule: wasmOf('ECHO'), input: null,
+    });
+    assert.strictEqual(r.workUnitId, 'work-unit-1');
+    assert.strictEqual(r.taskId, 'submitter-task-1');
+  });
+});
+
+// ── 9. EventEmitter — a throwing listener must not stall the rest ────────────
+
+describe('EventEmitter fault isolation', () => {
+  test('a listener that throws does not prevent later listeners from running', () => {
+    const emitter = new dist.EventEmitter();
+    const ran = [];
+    emitter.on('message', () => { throw new Error('boom'); });
+    emitter.on('message', () => { ran.push('second'); });
+    assert.doesNotThrow(() => emitter.emit('message', {}));
+    assert.deepStrictEqual(ran, ['second']);
+  });
+
+  test('off() during dispatch does not skip a listener', () => {
+    const emitter = new dist.EventEmitter();
+    const ran = [];
+    const a = () => { ran.push('a'); emitter.off('e', a); };
+    const b = () => ran.push('b');
+    emitter.on('e', a); emitter.on('e', b);
+    emitter.emit('e');
+    assert.deepStrictEqual(ran, ['a', 'b']);
   });
 });

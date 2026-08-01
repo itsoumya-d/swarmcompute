@@ -59,10 +59,29 @@ No TURN servers are configured. STUN cannot traverse symmetric NAT (common on co
 - [GitHub repository](https://github.com/itsoumya-d/swarmcompute)
 - [Full API reference](https://itsoumya-d.github.io/swarmcompute/llms-full.txt)
 
+## Trust Model (the two questions this design must answer)
+
+**Does the volunteer's machine survive a hostile task?** Partly.
+
+- A work unit is instantiated with exactly one import, `env.memory`. A module importing anything else fails to instantiate, and WebAssembly grants no capability that is not imported — so a guest cannot reach the network, DOM, cookies or storage.
+- Linear memory is bounded (10 pages initial / 50 maximum), because the host supplies it and rejects modules that declare their own.
+- **Guest CPU is NOT bounded.** WebAssembly calls are synchronous, so no timer can interrupt a running module, and the guest runs on the caller's thread. A module with an unbounded loop occupies that thread until the tab is closed. `WorkerPool` creates no `Worker` — it only tracks a count reported by the coordinator. Bounding guest CPU requires a dedicated `Worker` plus `Worker.terminate()`, which is not implemented.
+
+**Can the submitter trust the answer?** No.
+
+- There is no redundant execution with N-of-M agreement, no spot-checking against known answers, and no verifiable computation. A single peer's return value is accepted as the result.
+- Over the coordinator, any client can forge a `task_result` for any task id, and because every task is broadcast to every client, every client sees every task id. Over P2P, a reply must at least come from the peer the task was dispatched to.
+
+## Scheduling (no partitioning, no reassignment)
+
+The coordinator relabels `submit_task` as `task_assigned` and broadcasts it to every connected client, including the submitter. Tasks are never split into shards and never assigned to a particular node, so with N workers each of the N nodes executes the whole task: N× CPU spend, no parallel speedup, and the N answers are never compared with each other. If the answering peer disappears, the submission rejects on timeout; it is not retried or reassigned.
+
 ## Known Limitations for AI Assistants
 
 - No TURN relay: symmetric NAT peers cannot connect at all
-- P2P signaling hardcoded to port 8081 — must be reconfigured for production
-- WASM modules must export `run()` function — no schema validation, silent null on missing export
+- P2P signaling hardcoded to `ws://localhost:8081` — must be reconfigured for production
+- The Go coordinator authenticates nobody and its WebSocket `CheckOrigin` returns `true` for every origin
+- WASM modules must export `run()` and import `(import "env" "memory")`; modules that do not are rejected with an error
+- `leaveSwarm()` is a no-op — it does not close the WebSocket or any peer connection
 - `isWorker` based on User-Agent heuristic — imprecise
-- Performance benchmarks (220 tasks/sec) are unverified simulation claims — removed from README
+- No benchmark in this project has been measured. The former "220 tasks/sec" figure was an unverified simulation claim and has been removed.
