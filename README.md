@@ -84,10 +84,14 @@ swarm.on('task_complete', (result) => console.log('Task done:', result));
 Accepts a WebSocket URL string or an options object. Defaults to `ws://localhost:8080`.
 
 #### `async joinSwarm(): Promise<void>`
-Opens a WebSocket connection to the coordinator. Also attempts a P2P signaling WebSocket on port 8081. If P2P signaling fails, it logs a warning and continues with coordinator relay only.
+Opens a WebSocket connection to the coordinator. Also attempts a P2P signaling WebSocket on port 8081. If P2P signaling fails, it logs a warning and continues with coordinator relay only. Repeated calls share an in-progress join or reuse live connections. Calling `leaveSwarm()` during a join rejects that join. An explicit join after a terminal connection failure starts a fresh session, cancelling any work still pending in the old session (including when only signaling was lost).
 
-#### `leaveSwarm(): void`
-Disconnects from the swarm.
+#### `async leaveSwarm(): Promise<void>`
+Disconnects owned coordinator/signaling sockets and RTC channels/peers, rejects pending submissions, clears their timers/listeners, and resets the worker count. It is safe to call repeatedly. Delayed callbacks and results from the departed session cannot affect a later join. User event subscriptions remain registered for reuse.
+
+Call `joinSwarm()` again before submitting more work. Submissions before the first join or after leaving reject immediately. A coordinator socket error/close also ends the session and cancels its pending work. Losing only the signaling socket preserves established P2P channels.
+
+Leaving abandons local asynchronous WASM work and suppresses its results. Browser compilation/instantiation already in progress may still finish, but the SDK will not continue into guest execution afterward. **It cannot interrupt an already-running synchronous `run()` call or cancel work executing on another peer.**
 
 #### `async submitTask(wasmModule: ArrayBuffer, input: any): Promise<TaskResult>`
 Submits a WASM task. If P2P peers are connected, the task is sent directly via WebRTC DataChannel. Otherwise it falls back to the coordinator relay. Returns `{ taskId, result, executionTimeMs }`.
@@ -102,10 +106,12 @@ Current number of known active workers (from coordinator messages).
 
 ### `WasmRunner`
 
-#### `static async run(unit: WorkUnit): Promise<WorkUnitResult>`
+#### `static async run(unit: WorkUnit, signal?: AbortSignal): Promise<WorkUnitResult>`
 Compiles and instantiates a WASM module **on the calling thread**. Calls the exported `run()` function with input data written to linear memory. Returns `{ workUnitId, taskId, result, error?, executionTimeMs }` — it resolves rather than rejects; errors appear in the `error` field.
 
 The module must import its linear memory as `(import "env" "memory" (memory 10))`. Modules that declare their own memory are rejected: the host cannot read their output (it would hand back silently-zeroed bytes) and the host page cap would not apply to their private allocation. Modules with no callable `run()` export, and `run()` return values outside the memory bounds, are also rejected with an error rather than reported as success.
+
+An optional abort signal abandons the asynchronous phase, releases the local timer/listener, and resolves an error result. It does not preempt synchronous guest code.
 
 The 30-second timer bounds only `compile()` and `instantiate()`. **It does not bound guest CPU** — see [Guest isolation](#guest-isolation-what-is-and-is-not-enforced).
 
@@ -197,3 +203,14 @@ Place behind an Nginx/Caddy reverse proxy with TLS for `wss://` support in produ
 
 Contributions are accepted under AGPL-3.0-or-later. Full terms: [LICENSING.md](LICENSING.md).
 
+
+## SDK lifecycle regression checks
+
+```bash
+npm ci
+npm run build
+npm test
+npx tsc --noEmit
+```
+
+`tests/lifecycle.test.mjs` drives the built SDK with deterministic WebSocket, RTC, and timer fakes. It covers cancellation on both task routes, leave while connecting, delayed old-session callbacks, explicit rejoin, signaling-only failure, and asynchronous WASM cancellation. No live peer, signaling service, or provider account is used; these checks do not establish real-network reachability or guest CPU isolation.

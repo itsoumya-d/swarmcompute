@@ -21,13 +21,25 @@ export class CoordinatorClient extends EventEmitter {
     if (wsUrl.startsWith('http')) {
       wsUrl = wsUrl.replace('http', 'ws');
     }
-    this.ws = new WebSocket(`${wsUrl}/ws`);
+    if (this.hasConnection()) return;
+    this.disconnect();
+    const ws = this.ws = new WebSocket(`${wsUrl}/ws`);
     
     this.ws.onopen = () => {
-      this.ws?.send(JSON.stringify({ type: 'register', isMobile: this.isMobile }));
+      if (this.ws !== ws) return;
+      ws.send(JSON.stringify({ type: 'register', isMobile: this.isMobile }));
     };
     
-    this.ws.onmessage = (event) => {
+    const disconnected = () => {
+      if (this.ws !== ws) return;
+      this.disconnect();
+      this.emit('disconnect');
+    };
+    ws.onclose = disconnected;
+    ws.onerror = disconnected;
+
+    ws.onmessage = (event) => {
+      if (this.ws !== ws) return;
       try {
         const msg = JSON.parse(event.data);
         this.emit('message', msg);
@@ -41,6 +53,18 @@ export class CoordinatorClient extends EventEmitter {
     if (this.ws?.readyState === WebSocket.OPEN) {
       this.ws.send(JSON.stringify(data));
     }
+  }
+
+  hasConnection(): boolean {
+    return this.ws !== null && (this.ws.readyState === 0 || this.ws.readyState === WebSocket.OPEN);
+  }
+
+  disconnect() {
+    const ws = this.ws;
+    this.ws = null;
+    if (!ws) return;
+    ws.onopen = ws.onmessage = ws.onerror = ws.onclose = null;
+    try { ws.close(); } catch {}
   }
 
   getIsMobile() {

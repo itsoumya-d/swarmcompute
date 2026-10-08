@@ -23,6 +23,7 @@ function arrayBufferToBase64(buffer: ArrayBuffer): string {
 
 export class TaskScheduler {
   private client: CoordinatorClient;
+  private pending = new Set<(reason: Error) => void>();
 
   constructor(client: CoordinatorClient) {
     this.client = client;
@@ -32,12 +33,22 @@ export class TaskScheduler {
     return new Promise((resolve, reject) => {
       const timeoutMs = task.timeoutMs > 0 ? task.timeoutMs : DEFAULT_TASK_TIMEOUT_MS;
 
+      let settled = false;
       const cleanup = () => {
+        settled = true;
+        this.pending.delete(cancel);
         clearTimeout(timer);
         this.client.off('message', handler);
       };
 
+      const cancel = (reason: Error) => {
+        if (settled) return;
+        cleanup();
+        reject(reason);
+      };
+
       const handler = (msg: any) => {
+        if (settled) return;
         // msg.result arrives from the network and may be absent; reading
         // .taskId off undefined would throw out of the WebSocket onmessage
         // handler and stall every other in-flight submission.
@@ -56,8 +67,7 @@ export class TaskScheduler {
       // listener stays registered for the lifetime of the page (one leaked
       // listener plus one retained task closure per submitTask call).
       const timer = setTimeout(() => {
-        cleanup();
-        reject(
+        cancel(
           new Error(
             `SwarmCompute: task ${task.id} was not answered within ${timeoutMs}ms. ` +
               `Results are relayed by the coordinator and are NOT verified: a task can go ` +
@@ -67,17 +77,26 @@ export class TaskScheduler {
         );
       }, timeoutMs);
 
+      this.pending.add(cancel);
       this.client.on('message', handler);
 
-      this.client.send({
-        type: 'submit_task',
-        task: {
-          id: task.id,
-          input: task.input,
-          timeoutMs,
-          wasmModule: arrayBufferToBase64(task.wasmModule)
-        }
-      });
+      try {
+        this.client.send({
+          type: 'submit_task',
+          task: {
+            id: task.id,
+            input: task.input,
+            timeoutMs,
+            wasmModule: arrayBufferToBase64(task.wasmModule)
+          }
+        });
+      } catch (error) {
+        cancel(error instanceof Error ? error : new Error(String(error)));
+      }
     });
+  }
+
+  cancelAll(reason: Error): void {
+    for (const cancel of [...this.pending]) cancel(reason);
   }
 }
