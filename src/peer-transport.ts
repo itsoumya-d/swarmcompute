@@ -19,6 +19,10 @@ const FRAME_TASK_V2 = 2;
 export class PeerTransport {
   private peers = new Map<string, { pc: RTCPeerConnection; dc: RTCDataChannel | null }>();
   private signalingWs?: WebSocket;
+  private generation = 0;
+  private active = true;
+  private cancelConnecting?: (reason: Error) => void;
+  private bufferedSends = new Map<RTCDataChannel, Set<() => void>>();
   private taskResultCallback?: (result: any, peerId: string) => void;
   private taskCallback?: (
     peerId: string,
@@ -30,11 +34,26 @@ export class PeerTransport {
   constructor() {}
 
   async connect(signalingUrl: string): Promise<void> {
+    this.disconnect();
+    this.active = true;
+    const generation = this.generation;
     return new Promise<void>((resolve, reject) => {
-      this.signalingWs = new WebSocket(signalingUrl);
-      this.signalingWs.onopen = () => resolve();
-      this.signalingWs.onerror = (e) => reject(e);
-      this.signalingWs.onmessage = async (msg) => {
+      const ws = this.signalingWs = new WebSocket(signalingUrl);
+      const current = () => this.active && this.generation === generation && this.signalingWs === ws;
+      this.cancelConnecting = reject;
+      ws.onopen = () => {
+        if (!current()) return;
+        this.cancelConnecting = undefined;
+        resolve();
+      };
+      ws.onerror = () => {
+        if (current()) this.disconnectSignaling(new Error('SwarmCompute: peer signaling connection failed.'));
+      };
+      ws.onclose = () => {
+        if (current()) this.disconnectSignaling(new Error('SwarmCompute: peer signaling connection closed.'));
+      };
+      ws.onmessage = async (msg) => {
+        if (!current()) return;
         try {
           const data = JSON.parse(msg.data);
           if (data.type === 'offer') {
@@ -45,13 +64,45 @@ export class PeerTransport {
             await this.handleIceCandidate(data.from, data.candidate);
           }
         } catch (e) {
-          console.error("Signaling error", e);
+          if (current()) console.error('Signaling error', e);
         }
       };
     });
   }
 
+  hasConnection(): boolean {
+    return !!this.signalingWs && (this.signalingWs.readyState === 0 || this.signalingWs.readyState === WebSocket.OPEN);
+  }
+
+  disconnect(reason = new Error('SwarmCompute: peer transport disconnected.')): void {
+    this.active = false;
+    this.generation++;
+    this.disconnectSignaling(reason);
+    for (const peerId of [...this.peers.keys()]) this.disconnectPeer(peerId);
+  }
+
+  private disconnectSignaling(reason: Error): void {
+    // An established RTC channel does not depend on the signaling socket.
+    // Keep healthy peers alive when only the signaling server goes away.
+    const cancel = this.cancelConnecting;
+    this.cancelConnecting = undefined;
+    cancel?.(reason);
+    const ws = this.signalingWs;
+    this.signalingWs = undefined;
+    if (ws) {
+      ws.onopen = ws.onmessage = ws.onerror = ws.onclose = null;
+      try { ws.close(); } catch {}
+    }
+  }
+
+  private isCurrentPeer(peerId: string, pc: RTCPeerConnection, generation: number): boolean {
+    return this.active && this.generation === generation && this.peers.get(peerId)?.pc === pc;
+  }
+
   async connectToPeer(peerId: string): Promise<void> {
+    if (!this.active) throw new Error('SwarmCompute: peer transport disconnected.');
+    const generation = this.generation;
+    this.disconnectPeer(peerId);
     const pc = new RTCPeerConnection({
       iceServers: [
         { urls: 'stun:stun.l.google.com:19302' },
@@ -64,13 +115,14 @@ export class PeerTransport {
     this.setupDataChannel(dc, peerId);
 
     pc.onicecandidate = (event) => {
-      if (event.candidate && this.signalingWs?.readyState === WebSocket.OPEN) {
+      if (this.isCurrentPeer(peerId, pc, generation) && event.candidate && this.signalingWs?.readyState === WebSocket.OPEN) {
         this.signalingWs.send(JSON.stringify({ type: 'ice-candidate', to: peerId, candidate: event.candidate }));
       }
     };
 
     pc.oniceconnectionstatechange = () => {
-      if (pc.iceConnectionState === 'disconnected' || pc.iceConnectionState === 'failed') {
+      if (this.isCurrentPeer(peerId, pc, generation) &&
+          (pc.iceConnectionState === 'disconnected' || pc.iceConnectionState === 'failed')) {
         this.disconnectPeer(peerId);
       }
     };
@@ -78,7 +130,9 @@ export class PeerTransport {
     this.peers.set(peerId, { pc, dc });
 
     const offer = await pc.createOffer();
+    if (!this.isCurrentPeer(peerId, pc, generation)) return;
     await pc.setLocalDescription(offer);
+    if (!this.isCurrentPeer(peerId, pc, generation)) return;
 
     if (this.signalingWs?.readyState === WebSocket.OPEN) {
       this.signalingWs.send(JSON.stringify({ type: 'offer', to: peerId, offer }));
@@ -86,6 +140,9 @@ export class PeerTransport {
   }
 
   private async handleOffer(peerId: string, offer: RTCSessionDescriptionInit): Promise<void> {
+    if (!this.active) return;
+    const generation = this.generation;
+    this.disconnectPeer(peerId);
     const pc = new RTCPeerConnection({
       iceServers: [
         { urls: 'stun:stun.l.google.com:19302' },
@@ -101,26 +158,36 @@ export class PeerTransport {
 
     pc.ondatachannel = (event) => {
       const dc = event.channel;
+      if (!this.isCurrentPeer(peerId, pc, generation)) {
+        this.closeDataChannel(dc);
+        return;
+      }
+      const oldChannel = this.peers.get(peerId)?.dc;
+      if (oldChannel && oldChannel !== dc) this.closeDataChannel(oldChannel);
       dc.binaryType = 'arraybuffer';
       this.peers.set(peerId, { pc, dc });
       this.setupDataChannel(dc, peerId);
     };
 
     pc.onicecandidate = (event) => {
-      if (event.candidate && this.signalingWs?.readyState === WebSocket.OPEN) {
+      if (this.isCurrentPeer(peerId, pc, generation) && event.candidate && this.signalingWs?.readyState === WebSocket.OPEN) {
         this.signalingWs.send(JSON.stringify({ type: 'ice-candidate', to: peerId, candidate: event.candidate }));
       }
     };
 
     pc.oniceconnectionstatechange = () => {
-      if (pc.iceConnectionState === 'disconnected' || pc.iceConnectionState === 'failed') {
+      if (this.isCurrentPeer(peerId, pc, generation) &&
+          (pc.iceConnectionState === 'disconnected' || pc.iceConnectionState === 'failed')) {
         this.disconnectPeer(peerId);
       }
     };
 
     await pc.setRemoteDescription(new RTCSessionDescription(offer));
+    if (!this.isCurrentPeer(peerId, pc, generation)) return;
     const answer = await pc.createAnswer();
+    if (!this.isCurrentPeer(peerId, pc, generation)) return;
     await pc.setLocalDescription(answer);
+    if (!this.isCurrentPeer(peerId, pc, generation)) return;
 
     if (this.signalingWs?.readyState === WebSocket.OPEN) {
       this.signalingWs.send(JSON.stringify({ type: 'answer', to: peerId, answer }));
@@ -143,6 +210,7 @@ export class PeerTransport {
 
   private setupDataChannel(dc: RTCDataChannel, peerId: string): void {
     dc.onmessage = (event) => {
+      if (!this.active || this.peers.get(peerId)?.dc !== dc) return;
       if (event.data instanceof ArrayBuffer) {
         const data: ArrayBuffer = event.data;
         if (data.byteLength < 9) return; // minimum header size
@@ -195,9 +263,16 @@ export class PeerTransport {
       if (dc.readyState !== 'open') return;
       if (dc.bufferedAmount > 65536) {
         dc.bufferedAmountLowThreshold = 16384;
-        dc.addEventListener('bufferedamountlow', () => {
+        let callbacks = this.bufferedSends.get(dc);
+        if (!callbacks) this.bufferedSends.set(dc, callbacks = new Set());
+        const send = () => {
+          if (!callbacks.delete(send)) return;
+          if (!callbacks.size) this.bufferedSends.delete(dc);
+          if (!this.active || dc.readyState !== 'open') return;
           try { dc.send(data as any); } catch {}
-        }, { once: true });
+        };
+        callbacks.add(send);
+        dc.addEventListener('bufferedamountlow', send, { once: true });
         return;
       }
       dc.send(data as any);
@@ -259,6 +334,17 @@ export class PeerTransport {
     this.taskCallback = callback;
   }
 
+  private closeDataChannel(dc: RTCDataChannel): void {
+    dc.onmessage = null;
+    const callbacks = this.bufferedSends.get(dc);
+    if (callbacks) {
+      for (const callback of callbacks) dc.removeEventListener('bufferedamountlow', callback);
+      callbacks.clear();
+      this.bufferedSends.delete(dc);
+    }
+    try { dc.close(); } catch {}
+  }
+
   private disconnectPeer(peerId: string): void {
     const peer = this.peers.get(peerId);
     if (peer) {
@@ -267,9 +353,10 @@ export class PeerTransport {
       // oniceconnectionstatechange handler, leaving the peer in the map with a
       // null dc — after which getConnectedPeers(), and therefore every
       // submitTask() call, threw for the remaining lifetime of the page.
-      try { peer.dc?.close(); } catch {}
-      try { peer.pc.close(); } catch {}
       this.peers.delete(peerId);
+      peer.pc.ondatachannel = peer.pc.onicecandidate = peer.pc.oniceconnectionstatechange = null;
+      if (peer.dc) this.closeDataChannel(peer.dc);
+      try { peer.pc.close(); } catch {}
     }
   }
 

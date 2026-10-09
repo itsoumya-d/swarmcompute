@@ -27,7 +27,7 @@ const MEMORY_MAXIMUM_PAGES = 50;
 const ASYNC_PHASE_TIMEOUT_MS = 30000;
 
 export class WasmRunner {
-  static async run(unit: WorkUnit): Promise<WorkUnitResult> {
+  static async run(unit: WorkUnit, signal?: AbortSignal): Promise<WorkUnitResult> {
     const startTime = performance.now();
 
     return new Promise((resolve) => {
@@ -37,6 +37,7 @@ export class WasmRunner {
         if (isDone) return;
         isDone = true;
         clearTimeout(timeout);
+        signal?.removeEventListener('abort', abort);
         resolve({
           workUnitId: unit.id,
           taskId: unit.taskId,
@@ -55,9 +56,17 @@ export class WasmRunner {
         });
       }, ASYNC_PHASE_TIMEOUT_MS);
 
+      const abort = () => settle({ error: 'SwarmCompute: work cancelled after leaving the swarm.' });
+      signal?.addEventListener('abort', abort, { once: true });
+      if (signal?.aborted) {
+        abort();
+        return;
+      }
+
       (async () => {
         try {
           const module = await WebAssembly.compile(unit.wasmModule);
+          if (isDone) return;
 
           // The host supplies the linear memory so that it can (a) bound the
           // allocation and (b) read the result back out afterwards.  A module
@@ -83,6 +92,7 @@ export class WasmRunner {
             maximum: MEMORY_MAXIMUM_PAGES
           });
           const instance = await WebAssembly.instantiate(module, { env: { memory } });
+          if (isDone) return;
 
           const run = instance.exports?.run;
           if (typeof run !== 'function') {

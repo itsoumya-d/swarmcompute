@@ -21,6 +21,10 @@ export class WorkerPool {
     });
   }
 
+  reset(): void {
+    this.workerCount = 0;
+  }
+
   getWorkerCount(): number {
     return this.workerCount;
   }
